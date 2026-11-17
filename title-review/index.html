@@ -9,6 +9,23 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&family=Source+Serif+4:opsz,wght@8..60,600&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js"></script>
+<style>
+.viewer { position: fixed; inset: 0; background: rgba(10, 16, 24, .72); display: none; z-index: 50; padding: 16px; }
+.viewer.open { display: grid; place-items: center; }
+.viewer .box { background: var(--card); border-radius: 10px; width: min(1000px, 100%); max-height: 100%; display: grid; grid-template-rows: auto 1fr; overflow: hidden; }
+.viewer .bar { display: flex; gap: 10px; align-items: center; justify-content: space-between; padding: 10px 14px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+.viewer .bar .ttl { font-weight: 600; font-size: 14px; overflow-wrap: anywhere; }
+.viewer .bar .ctl { display: flex; gap: 6px; align-items: center; }
+.viewer .bar button, .viewer .bar a { font: 500 13px var(--font-body); padding: 6px 12px; border-radius: 6px; border: 1px solid var(--line); background: var(--paper); color: var(--ink); cursor: pointer; text-decoration: none; }
+.viewer .stage { overflow: auto; background: #6b7682; padding: 12px; text-align: center; }
+.viewer canvas { max-width: 100%; height: auto; background: #fff; box-shadow: 0 2px 10px rgba(0,0,0,.3); }
+.pagebtns { display: flex; gap: 6px; flex-wrap: wrap; }
+.pagebtn { font: 500 12.5px var(--font-body); padding: 4px 10px; border-radius: 99px; border: 1px solid var(--accent); background: var(--accent-soft); color: var(--accent); cursor: pointer; }
+.filelist { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; font-size: 14px; }
+.filelist a { color: var(--accent); }
+</style>
 <style>
 :root {
   /* Layout: a left work column (upload, then results) with tabs for History and Rules. */
@@ -247,6 +264,21 @@ ol.qs { margin: 0; padding-left: 20px; display: grid; gap: 6px; font-size: 14px;
   </section>
 </main>
 
+<div class="viewer" id="viewer" role="dialog" aria-modal="true" aria-label="Page preview">
+  <div class="box">
+    <div class="bar">
+      <span class="ttl" id="vTitle"></span>
+      <span class="ctl">
+        <button type="button" id="vPrev">‹ Prev</button>
+        <span id="vPage" class="note"></span>
+        <button type="button" id="vNext">Next ›</button>
+        <a id="vOpen" href="#" target="_blank" rel="noopener">Open PDF</a>
+        <button type="button" id="vClose">Close</button>
+      </span>
+    </div>
+    <div class="stage"><p class="note" id="vMsg" style="color:#fff"></p><canvas id="vCanvas"></canvas></div>
+  </div>
+</div>
 <script>
 const CFG = { url: "https://upkrpewcsvfltqwmxmjs.supabase.co", key: "sb_publishable_L1f8ADmFXkPqsSGvLMibDA_6uah2q6v" };
 const FN = CFG.url + "/functions/v1/title-review";
@@ -390,7 +422,10 @@ if (queue.some(q => q.status === "running" || q.status === "queued")) ensurePoll
 const PRI_ORDER = { CRITICAL: 0, HIGH: 1, MEDIUM: 2, LOW: 3 };
 const OVERALL = { ready: "Ready for package", curative_needed: "Curative needed", escalate: "Escalate" };
 const CATS = ["Ownership/Vesting","Mortgage/DOT","Judgment","Federal Tax Lien","State Tax Lien","Mechanics' Lien","Probate/Estate","Bankruptcy","Entity/LLC","Trust","HOA/Condo","Municipal/Utility","Easement/Restriction","Survey/Boundary","Foreclosure/Tax Sale","Recording Defect","Legal Description","Search Quality","Commitment Error","Other"];
+let currentFiles = [], currentFileCount = 0;
+const shortName = (n) => String(n).replace(/\.pdf$/i, "").slice(0, 28);
 function renderResults(rev, fbMap) {
+  currentFiles = rev.files || []; currentFileCount = currentFiles.length;
   const r = rev.result || {}, s = r.summary || {};
   const findings = [...(r.findings || [])].sort((a, b) => (PRI_ORDER[a.priority] ?? 9) - (PRI_ORDER[b.priority] ?? 9));
   const missed = findings.filter(f => f.team_missed);
@@ -450,9 +485,15 @@ function renderResults(rev, fbMap) {
       ${(r.qualia_tasks || []).filter(Boolean).length ? `<p class="note">Tasks to open: ${r.qualia_tasks.filter(Boolean).map(esc).join(", ")}</p>` : ""}
       <pre class="qnote" id="qnote">${esc(r.qualia_note || "")}</pre>
     </div>
+    ${(rev.files || []).length ? `<div class="card"><h2>Uploaded files</h2>
+      <p class="hint">The original PDFs for this review. Links work for one hour; reopen the review for fresh links.</p>
+      <ul class="filelist">${rev.files.map(f => `<li>${f.url ? `<a href="${esc(f.url)}" target="_blank" rel="noopener">${esc(f.name)}</a>` : esc(f.name)} <span class="note">· ${esc({ search: "Search package", commitment: "Draft commitment", other: "Other document" }[f.kind] || f.kind)}${f.bytes ? " · " + (f.bytes / 1048576).toFixed(1) + " MB" : ""}</span></li>`).join("")}</ul>
+    </div>` : ""}
     <p class="note">The AI recommends; a reviewer clears every item and gives CTC.${cost != null ? ` Cost of this review: about $${Number(cost).toFixed(2)}.` : ""}</p>`;
+  currentFiles = rev.files || [];
 
   out.querySelectorAll(".finding").forEach(el => wireFinding(el, rev));
+  out.querySelectorAll(".pagebtn").forEach(b => b.addEventListener("click", () => showPage(b.dataset.file, Number(b.dataset.page))));
   $("#copyNote").addEventListener("click", async () => {
     try { await navigator.clipboard.writeText($("#qnote").textContent); $("#copyNote").textContent = "Copied"; }
     catch (e) { $("#copyNote").textContent = "Select the text to copy"; }
@@ -486,6 +527,7 @@ function findingHtml(f, fbMap) {
       ${row("Recording ref", f.recording_ref)}${row("Parties", f.parties)}${row("Issue", f.issue)}${row("Why it matters", f.concern)}
       ${row("Documents needed", f.documents_required)}${row("Action", f.action)}${row("Source", f.source)}
     </div>
+    ${(f.pages || []).filter(p => p && p.page).length ? `<div class="pagebtns">${f.pages.filter(p => p && p.page).slice(0, 6).map(p => `<button type="button" class="pagebtn" data-file="${esc(p.file || "")}" data-page="${esc(p.page)}">Show page ${esc(p.page)}${(currentFileCount > 1 && p.file) ? " · " + esc(shortName(p.file)) : ""}</button>`).join("")}</div>` : ""}
     <div class="fb">
       <button type="button" class="v-correct" data-v="correct" aria-pressed="${fb.verdict === "correct"}">Correct</button>
       <button type="button" class="v-wrong" data-v="wrong" aria-pressed="${fb.verdict === "wrong"}">Wrong</button>
@@ -513,6 +555,55 @@ function wireFinding(el, rev) {
   $("[data-save]", el).addEventListener("click", save);
   $("input", el).addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); save(); } });
 }
+
+/* page viewer: draws the exact PDF page the finding points to */
+const pdfCache = {};
+let vDoc = null, vPageNo = 1, vFile = null;
+function findFile(name) {
+  const n = String(name || "").toLowerCase().trim();
+  return currentFiles.find(f => f.name.toLowerCase() === n) ||
+         currentFiles.find(f => n && (f.name.toLowerCase().includes(n) || n.includes(f.name.toLowerCase().replace(/\.pdf$/, "")))) ||
+         currentFiles.find(f => f.kind === "search") || currentFiles[0];
+}
+async function showPage(fileName, page) {
+  const f = findFile(fileName);
+  const v = $("#viewer");
+  v.classList.add("open");
+  $("#vMsg").textContent = "Loading page…"; $("#vCanvas").style.display = "none";
+  if (!f || !f.url) { $("#vMsg").textContent = "This file's link has expired. Reopen the review from Past reviews and try again."; return; }
+  if (!window.pdfjsLib) { $("#vMsg").textContent = "The page viewer didn't load. Refresh the page."; return; }
+  try {
+    vFile = f;
+    $("#vTitle").textContent = f.name;
+    $("#vOpen").href = f.url;
+    if (!pdfCache[f.url]) pdfCache[f.url] = pdfjsLib.getDocument({ url: f.url }).promise;
+    vDoc = await pdfCache[f.url];
+    vPageNo = Math.min(Math.max(1, page || 1), vDoc.numPages);
+    await drawPage();
+  } catch (e) { $("#vMsg").textContent = "Couldn't open this PDF here. Use Open PDF instead."; }
+}
+async function drawPage() {
+  const p = await vDoc.getPage(vPageNo);
+  const vp1 = p.getViewport({ scale: 1 });
+  const scale = Math.min(2, 1400 / vp1.width);
+  const vp = p.getViewport({ scale });
+  const c = $("#vCanvas");
+  c.width = Math.round(vp.width); c.height = Math.round(vp.height);
+  await p.render({ canvasContext: c.getContext("2d"), viewport: vp }).promise;
+  c.style.display = ""; $("#vMsg").textContent = "";
+  $("#vPage").textContent = `Page ${vPageNo} of ${vDoc.numPages}`;
+  $("#vPrev").disabled = vPageNo <= 1; $("#vNext").disabled = vPageNo >= vDoc.numPages;
+}
+$("#vPrev").addEventListener("click", () => { if (vDoc && vPageNo > 1) { vPageNo--; drawPage(); } });
+$("#vNext").addEventListener("click", () => { if (vDoc && vPageNo < vDoc.numPages) { vPageNo++; drawPage(); } });
+$("#vClose").addEventListener("click", () => $("#viewer").classList.remove("open"));
+$("#viewer").addEventListener("click", (e) => { if (e.target.id === "viewer") $("#viewer").classList.remove("open"); });
+document.addEventListener("keydown", (e) => {
+  if (!$("#viewer").classList.contains("open")) return;
+  if (e.key === "Escape") $("#viewer").classList.remove("open");
+  if (e.key === "ArrowLeft") $("#vPrev").click();
+  if (e.key === "ArrowRight") $("#vNext").click();
+});
 
 /* history */
 async function loadHistory() {
