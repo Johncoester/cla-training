@@ -1,5 +1,6 @@
 (function(){
-const API = window.API, CFG = window.CLA_CONFIG || {}, COURSES = window.COURSES || [];
+const API = window.API, CFG = window.CLA_CONFIG || {}, ALL_COURSES = window.COURSES || [];
+let COURSES = ALL_COURSES.filter(c => !c.draft);
 const $ = id => document.getElementById(id);
 const L = "ABCDE", STORE_KEY = "cla-training-exam-progress-v2";
 const views = ["vLoading","vLogin","vCourses","vHome","vLearn","vLesson","vExam","vResult","vAdmin"];
@@ -38,14 +39,17 @@ async function boot(){
     show("vLoading"); return;
   }
   ME = cur.profile;
+  COURSES = ALL_COURSES.filter(c => !c.draft || ME.role === "admin");
   $("who").textContent = ME.full_name || ME.email;
   setNav(true);
   if (location.hash) history.replaceState(null, "", location.pathname);   // clear auth tokens from the address bar
+  C = null;
   if (COURSES.length === 1){ await openCourse(COURSES[0]); } else renderCourses();
 }
 function setNav(on){
   ["navHome","navLearn","navOut"].forEach(id => $(id).classList.toggle("hide", !on || API.mode === "demo" && id === "navOut"));
   $("navHome").classList.toggle("hide", !on);
+  $("navLearn").classList.toggle("hide", !on || !C);
   $("navAdmin").classList.toggle("hide", !(on && ME && ME.role === "admin"));
   if (!on) $("who").textContent = "";
 }
@@ -65,23 +69,25 @@ $("navOut").onclick = async () => { clearInterval(tick); S = null; await API.sig
 // ---------- courses ----------
 function renderCourses(){
   show("vCourses");
-  $("courseList").innerHTML = COURSES.map((c,i) => `<div class="card course-card"><div><h3>${esc(c.title)}</h3><p class="note" style="margin:4px 0 0">${esc(c.description)}</p></div><button class="btn" data-i="${i}">Open</button></div>`).join("");
+  $("navLearn").classList.add("hide");
+  $("courseList").innerHTML = COURSES.map((c,i) => `<div class="card course-card"><div>${c.draft ? '<span class="status invited" style="margin-bottom:6px;display:inline-block">Draft — only admins can see this</span>' : ""}<h3>${esc(c.title)}</h3><p class="note" style="margin:4px 0 0">${esc(c.description)}</p></div><button class="btn" data-i="${i}">Open</button></div>`).join("");
 }
 $("courseList").addEventListener("click", e => { const b = e.target.closest("button"); if (b) openCourse(COURSES[+b.dataset.i]); });
 
 async function openCourse(c){
   setCourse(c);
+  $("navLearn").classList.remove("hide");
   try { learned = await API.myProgress(c.id); } catch(e){ learned = {}; }
   renderHome();
 }
 function renderHome(){
   show("vHome");
-  $("cTitle").textContent = C.title; $("cSub").textContent = C.subtitle || ""; $("cDesc").textContent = C.description || "";
+  $("cTitle").textContent = C.title + (C.draft ? " (draft)" : ""); $("cSub").textContent = C.subtitle || ""; $("cDesc").textContent = C.description || "";
   const n = Object.values(C.exam.counts).reduce((a,b) => a+b, 0);
   $("nExam").textContent = n; $("nMin").textContent = C.exam.minutes; $("nPass").textContent = C.exam.pass;
   const counts = {}; C.questions.forEach(q => counts[q.s] = (counts[q.s]||0)+1);
   $("secSel").innerHTML = `<option value="ALL">All sections (${C.questions.length})</option>` + Object.entries(C.sections).map(([k,v]) => `<option value="${k}">${esc(v)} (${counts[k]||0})</option>`).join("");
-  $("bankInfo").textContent = `Question bank: ${C.questions.length} questions. Source: ${C.source || ""}.`;
+  $("bankInfo").textContent = `Question bank: ${C.questions.length} questions.` + (C.source ? ` Source: ${C.source}.` : "") + (C.draft ? " This course is a draft: only admins can see it." : "");
   renderProg(); checkResume(); loadHistory();
 }
 async function loadHistory(){
@@ -158,7 +164,7 @@ function renderQ(){
     else if (it.pick === oi) c += " sel";
     return `<button class="${c}" data-oi="${oi}" ${reveal ? "disabled" : ""}><span class="k">${L[pos]}</span><span>${esc(q.o[oi])}</span></button>`;
   }).join("");
-  $("qExplain").innerHTML = reveal ? `<div class="explain"><b>${it.pick === q.a ? "Correct." : "Not quite."}</b> ${esc(q.e)} <span class="note">— Course book p. ${esc(q.p)}</span></div>` : "";
+  $("qExplain").innerHTML = reveal ? `<div class="explain"><b>${it.pick === q.a ? "Correct." : "Not quite."}</b> ${esc(q.e)} ${q.p ? `<span class="note">— Course book p. ${esc(q.p)}</span>` : ""}</div>` : "";
   $("prevBtn").disabled = S.cur === 0;
   $("nextBtn").textContent = S.cur === S.items.length-1 ? (ex ? "Review & submit" : "Finish") : "Next →";
   $("checkBtn").disabled = it.pick === null;
@@ -232,7 +238,7 @@ function renderReview(f){
     const ok = it.pick === q.a;
     const opts = it.order.map((oi,pos) => { let c = "opt"; if (oi === q.a) c += " right"; else if (oi === it.pick) c += " wrong"; return `<div class="${c}" style="cursor:default"><span class="k">${L[pos]}</span><span>${esc(q.o[oi])}</span></div>`; }).join("");
     return `<div class="rev"><div style="display:flex;gap:8px;align-items:center;margin-bottom:6px;flex-wrap:wrap"><b>Q${i+1}</b><span class="tag ${ok ? "ok" : "no"}">${ok ? "Correct" : (it.pick === null ? "Unanswered" : "Missed")}</span><span class="pill">${esc(C.sections[q.s])}</span>${it.flag ? '<span class="pill" style="background:#fff3e0;color:var(--flag)">Flagged</span>' : ""}</div>
-    <div style="margin-bottom:10px">${esc(q.q)}</div>${opts}<div class="explain">${esc(q.e)} <span class="note">— Course book p. ${esc(q.p)}</span></div></div>`;
+    <div style="margin-bottom:10px">${esc(q.q)}</div>${opts}<div class="explain">${esc(q.e)} ${q.p ? `<span class="note">— Course book p. ${esc(q.p)}</span>` : ""}</div></div>`;
   }).join("") : `<div class="empty">Nothing to show.</div>`;
 }
 $("rFilters").addEventListener("click", e => { const c = e.target.closest(".chip"); if (c) renderReview(c.dataset.f); });
@@ -244,14 +250,14 @@ function renderProg(){
   const n = C.lessons.filter(l => learned[l.id]).length, p = Math.round(100*n/C.lessons.length);
   $("homeProg").style.width = p + "%";
   $("homeProgTxt").textContent = `${n} of ${C.lessons.length} lessons complete`;
-  $("learnSub").textContent = `${C.lessons.length} lessons, about ${C.lessons.reduce((a,l) => a+l.m, 0)} minutes of reading. ${n} of ${C.lessons.length} complete. Page numbers point to the course book.`;
+  $("learnSub").textContent = `${C.lessons.length} lessons, about ${C.lessons.reduce((a,l) => a+l.m, 0)} minutes of reading. ${n} of ${C.lessons.length} complete. ${C.lessons.some(l => l.p) ? "Page numbers point to the course book." : ""}`;
 }
 function renderLearn(){
   show("vLearn"); renderProg();
   $("learnMods").innerHTML = Object.entries(C.sections).map(([k,v]) => {
     const ls = C.lessons.map((l,i) => [l,i]).filter(([l]) => l.s === k);
     if (!ls.length) return "";
-    return `<div class="secblock"><h2>${esc(v)}</h2>${ls.map(([l,i]) => `<button class="lrow ${learned[l.id] ? "done" : ""}" data-i="${i}"><span class="chk">${learned[l.id] ? "✓" : ""}</span><span><div class="lt1">${esc(l.t)}</div><div class="lt2">${l.m} min read · ${l.qs.length} practice questions · Book p. ${esc(l.p)}</div></span><span class="go">${learned[l.id] ? "Review" : "Start"} →</span></button>`).join("")}</div>`;
+    return `<div class="secblock"><h2>${esc(v)}</h2>${ls.map(([l,i]) => `<button class="lrow ${learned[l.id] ? "done" : ""}" data-i="${i}"><span class="chk">${learned[l.id] ? "✓" : ""}</span><span><div class="lt1">${esc(l.t)}</div><div class="lt2">${l.m} min read · ${l.qs.length} practice questions${l.p ? ` · Book p. ${esc(l.p)}` : ""}</div></span><span class="go">${learned[l.id] ? "Review" : "Start"} →</span></button>`).join("")}</div>`;
   }).join("");
   $("learnCheat").innerHTML = Object.entries(C.sections).map(([k,v]) => {
     const rows = C.lessons.filter(l => l.s === k).flatMap(l => l.keys);
@@ -269,7 +275,7 @@ function openLesson(i){
   curLesson = i; const l = C.lessons[i];
   show("vLesson");
   $("lsSec").textContent = C.sections[l.s];
-  $("lsMeta").textContent = `Lesson ${i+1} of ${C.lessons.length} · ${l.m} min · Course book p. ${l.p}`;
+  $("lsMeta").textContent = `Lesson ${i+1} of ${C.lessons.length} · ${l.m} min` + (l.p ? ` · Course book p. ${l.p}` : "");
   $("lsTitle").textContent = l.t;
   $("lsBody").innerHTML = l.body;   // trusted course content shipped with the site
   $("lsKeys").innerHTML = l.keys.map(r => `<tr><td>${esc(r[0])}</td><td>${esc(r[1])}</td></tr>`).join("");
@@ -300,7 +306,8 @@ $("goLearn").onclick = renderLearn;
 // ---------- admin ----------
 async function renderAdmin(){
   show("vAdmin");
-  $("admCourse").innerHTML = COURSES.map((c,i) => `<option value="${i}" ${c === C ? "selected" : ""}>${esc(c.title)}</option>`).join("");
+  if (!C) setCourse(COURSES[0]);
+  $("admCourse").innerHTML = COURSES.map((c,i) => `<option value="${i}" ${c === C ? "selected" : ""}>${esc(c.title)}${c.draft ? " (draft)" : ""}</option>`).join("");
   await loadTeam();
 }
 $("admCourse").onchange = async () => { setCourse(COURSES[+$("admCourse").value]); try { learned = await API.myProgress(C.id); } catch(e){} loadTeam(); };
