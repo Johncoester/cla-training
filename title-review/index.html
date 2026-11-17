@@ -214,11 +214,13 @@ ol.qs { margin: 0; padding-left: 20px; display: grid; gap: 6px; font-size: 14px;
       </div>
     </form>
 
-    <div class="card hidden" id="progress">
-      <h2>Working</h2>
-      <ul class="steps" id="steps"></ul>
-      <p class="note" id="progNote" style="margin:12px 0 0"></p>
+    <div class="card hidden" id="queueCard">
+      <div class="section-title"><h2>In progress</h2><span class="note">You can start the next file while these run. Each one turns green when it's done.</span></div>
+      <div class="tablewrap" style="margin-top:10px">
+        <table><thead><tr><th>File</th><th>Status</th><th>Time</th><th></th></tr></thead><tbody id="queueBody"></tbody></table>
+      </div>
     </div>
+    <div id="progress" class="hidden"></div>
 
     <div id="results" class="hidden" style="display:grid;gap:20px"></div>
   </section>
@@ -299,14 +301,53 @@ function renderFileList(slot) {
   }));
 }
 
-/* progress */
-const STEPS = ["Uploading PDFs", "Starting", "Claude is reviewing", "Done"];
-function setStep(i, note) {
-  $("#steps").innerHTML = STEPS.map((s, k) => `<li class="${k < i ? "done" : k === i ? "doing" : ""}">${s}</li>`).join("");
-  $("#progNote").textContent = note || "";
+/* in-progress queue (kept in this browser so a refresh doesn't lose it) */
+let queue = [];
+try { queue = JSON.parse(localStorage.getItem("clatr_queue") || "[]"); } catch (e) { queue = []; }
+const saveQueue = () => { try { localStorage.setItem("clatr_queue", JSON.stringify(queue.map(q => ({ ...q, local: undefined })))); } catch (e) {} };
+let pollTimer = null;
+function renderQueue() {
+  $("#queueCard").classList.toggle("hidden", !queue.length);
+  $("#queueBody").innerHTML = queue.map((q, i) => {
+    const secs = q.startedAt ? Math.max(0, Math.round(((q.doneAt || Date.now()) - q.startedAt) / 1000)) : 0;
+    const time = q.startedAt ? `${Math.floor(secs / 60)}m ${secs % 60}s` : "";
+    let status, action = "";
+    if (q.status === "done") { status = `<span class="st-ok">Done${q.overall ? " · " + esc(OVERALL[q.overall] || "") : ""}</span>${q.cost != null ? ` <span class="note">($${Number(q.cost).toFixed(2)})</span>` : ""}`; action = `<button class="btn" type="button" data-open="${i}">Open</button>`; }
+    else if (q.status === "error") { status = `<span class="st-issue">Problem:</span> ${esc(q.error || "The review failed.")}`; action = q.id ? `<button class="btn ghost" type="button" data-retry="${i}">Retry</button>` : ""; }
+    else { status = esc(q.progress || "Working…"); }
+    return `<tr><td class="mono">${esc(q.file_no || "(no file number)")}</td><td>${status}</td><td>${time}</td>
+      <td style="white-space:nowrap">${action} <button type="button" data-rm="${i}" aria-label="Remove from list" style="border:0;background:none;color:var(--muted);cursor:pointer">✕</button></td></tr>`;
+  }).join("");
+  $("#queueBody").querySelectorAll("[data-open]").forEach(b => b.addEventListener("click", () => openReview(queue[Number(b.dataset.open)].id)));
+  $("#queueBody").querySelectorAll("[data-retry]").forEach(b => b.addEventListener("click", () => retry(Number(b.dataset.retry))));
+  $("#queueBody").querySelectorAll("[data-rm]").forEach(b => b.addEventListener("click", () => { queue.splice(Number(b.dataset.rm), 1); saveQueue(); renderQueue(); }));
+}
+async function retry(i) {
+  const q = queue[i];
+  q.status = "running"; q.progress = "Starting again"; q.error = ""; q.startedAt = Date.now(); q.doneAt = null; renderQueue();
+  try { await api("start", { id: q.id }); } catch (e) { q.status = "error"; q.error = e.message; }
+  saveQueue(); renderQueue(); ensurePolling();
+}
+function ensurePolling() {
+  if (pollTimer) return;
+  pollTimer = setInterval(async () => {
+    const ids = queue.filter(q => q.id && (q.status === "running" || q.status === "queued")).map(q => q.id);
+    renderQueue();
+    if (!ids.length) { if (!queue.some(q => q.status === "uploading")) { clearInterval(pollTimer); pollTimer = null; } return; }
+    try {
+      const { reviews } = await api("status", { ids });
+      for (const r of reviews) {
+        const q = queue.find(x => x.id === r.id);
+        if (!q) continue;
+        q.progress = r.progress; q.error = r.error; q.cost = r.cost; q.overall = r.overall;
+        if (r.status === "done" || r.status === "error") { q.status = r.status; q.doneAt = q.doneAt || Date.now(); }
+      }
+      saveQueue(); renderQueue();
+    } catch (e) { /* the service was briefly busy; try again on the next tick */ }
+  }, 5000);
 }
 
-/* run */
+/* run: upload, start, then free the form for the next file right away */
 $("#form").addEventListener("submit", async (e) => {
   e.preventDefault();
   if (!files.search.length) { $("#runNote").textContent = "Add the search package first."; return; }
@@ -315,46 +356,35 @@ $("#form").addEventListener("submit", async (e) => {
   const all = [...files.search.map(f => ({ f, kind: "search" })), ...files.commitment.map(f => ({ f, kind: "commitment" })), ...files.other.map(f => ({ f, kind: "other" }))];
   const total = all.reduce((a, x) => a + x.f.size, 0);
   if (total > 30 * 1048576) { $("#runNote").textContent = "These files add up to more than 30 MB. Remove duplicates or very large scans."; return; }
-  $("#runNote").textContent = "";
-  $("#run").disabled = true;
-  $("#progress").classList.remove("hidden"); $("#results").classList.add("hidden");
+  const meta = { file_no: $("#fileNo").value.trim(), state: $("#state").value, tx_type: $("#txType").value, underwriter: $("#underwriter").value, notes: $("#notes").value.trim(), reviewer_name: reviewer() };
+  const q = { id: null, file_no: meta.file_no, status: "uploading", progress: "Uploading PDFs", startedAt: Date.now() };
+  queue.unshift(q);
+  // clear the form so the next file can go in now
+  files.search = []; files.commitment = []; files.other = [];
+  ["search", "commitment", "other"].forEach(renderFileList);
+  $("#fileNo").value = ""; $("#notes").value = "";
+  $("#runNote").textContent = "Started. You can add the next file now.";
+  renderQueue(); ensurePolling();
   try {
-    setStep(0);
-    const meta = { file_no: $("#fileNo").value.trim(), state: $("#state").value, tx_type: $("#txType").value, underwriter: $("#underwriter").value, notes: $("#notes").value.trim(), reviewer_name: reviewer() };
     const created = await api("create", { ...meta, files: all.map(x => ({ name: x.f.name, kind: x.kind, bytes: x.f.size })) });
+    q.id = created.id;
     for (let i = 0; i < all.length; i++) {
-      setStep(0, `${all[i].f.name} (${i + 1} of ${all.length})`);
+      q.progress = `Uploading ${i + 1} of ${all.length}`; renderQueue();
       const u = created.uploads[i];
       const { error } = await sb.storage.from(BUCKET).uploadToSignedUrl(u.path, u.token, all[i].f, { contentType: "application/pdf" });
-      if (error) throw new Error("Upload failed for " + all[i].f.name + ". Check your connection and try again.");
+      if (error) throw new Error("Upload failed for " + all[i].f.name + ". Check your connection, then add the file again.");
     }
-    setStep(1);
     await api("start", { id: created.id });
-    const t0 = Date.now();
-    let rev = null;
-    while (true) {
-      await sleep(4000);
-      const g = await api("get", { id: created.id });
-      rev = g.review;
-      const secs = Math.round((Date.now() - t0) / 1000);
-      setStep(2, `${rev.progress || "Working"} · ${Math.floor(secs / 60)}m ${secs % 60}s`);
-      if (rev.status === "done" || rev.status === "error") break;
-      if (secs > 900) throw new Error("This is taking longer than 15 minutes. Check Past reviews later, or try again with fewer pages.");
-    }
-    if (rev.status === "error") throw new Error(rev.error || "The review failed. Try again.");
-    setStep(4);
-    $("#progress").classList.add("hidden");
-    renderResults(rev, {});
-    files.search = []; files.commitment = []; files.other = [];
-    ["search", "commitment", "other"].forEach(renderFileList);
+    q.status = "running"; q.progress = "Starting"; q.startedAt = Date.now();
   } catch (err) {
-    $("#progress").classList.add("hidden");
-    const r = $("#results"); r.classList.remove("hidden");
-    r.innerHTML = `<div class="err">${esc(err.message || err)}</div>`;
-  } finally {
-    $("#run").disabled = false;
+    q.status = "error"; q.error = err.message || String(err);
+    if (/Upload failed/.test(q.error)) q.id = null; // nothing to retry without the file
   }
+  saveQueue(); renderQueue(); ensurePolling();
 });
+queue.forEach(q => { if (q.status === "uploading") { q.status = "error"; q.error = "The upload was interrupted when the page closed. Add the file again."; q.id = null; } });
+renderQueue();
+if (queue.some(q => q.status === "running" || q.status === "queued")) ensurePolling();
 
 /* results */
 const PRI_ORDER = { CRITICAL: 0, HIGH: 1, MEDIUM: 2, LOW: 3 };
