@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CLA Title &amp; Escrow — Team Training</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+<div id="demoBar" class="demo hide">Demo mode: Supabase isn't connected yet, so there are no logins and everything is saved in this browser only.</div>
+<header class="top">
+  <div class="brand"><div class="mark">C</div><div><span id="coName">CLA Title &amp; Escrow</span><small id="siteName">Team Training</small></div></div>
+  <div class="sp"></div>
+  <span class="who" id="who"></span>
+  <button class="navbtn hide" id="navHome">Courses</button>
+  <button class="navbtn hide" id="navLearn">Learn</button>
+  <button class="navbtn hide" id="navAdmin">Admin</button>
+  <button class="navbtn hide" id="navOut">Sign out</button>
+</header>
+
+<main class="wrap">
+  <!-- LOADING -->
+  <section id="vLoading"><div class="empty">Loading…</div></section>
+
+  <!-- LOGIN -->
+  <section id="vLogin" class="hide">
+    <div class="card login">
+      <h1>Sign in</h1>
+      <p class="note">Enter your work email. We'll email you a sign-in link. No password needed.</p>
+      <form id="loginForm">
+        <input type="email" id="loginEmail" placeholder="you@clatitle.com" required autocomplete="email">
+        <button class="btn" style="width:100%" id="loginBtn">Email me a sign-in link</button>
+      </form>
+      <div id="loginMsg"></div>
+      <p class="note" style="margin-top:16px">Only invited team members can sign in. If you weren't invited, ask your manager.</p>
+    </div>
+  </section>
+
+  <!-- COURSES -->
+  <section id="vCourses" class="hide">
+    <h1 style="font-size:28px;margin-bottom:6px">Your training</h1>
+    <p class="note" style="margin-bottom:18px">Pick a course to study, practice or take the exam.</p>
+    <div id="courseList" class="grid"></div>
+  </section>
+
+  <!-- COURSE HOME -->
+  <section id="vHome" class="hide">
+    <div class="hero" style="margin-bottom:22px">
+      <span class="pill" id="cSub"></span>
+      <h1 style="margin-top:10px" id="cTitle"></h1>
+      <p id="cDesc"></p>
+    </div>
+    <div class="card learnhero">
+      <div><h3>Start here: study lessons</h3><p>Plain-language lessons covering every topic, each with key numbers, common exam traps and practice questions.</p>
+      <div class="prog"><span id="homeProg" style="width:0%"></span></div><div style="font-size:12px;color:#d6deeb;margin-top:4px" id="homeProgTxt"></div></div>
+      <button class="btn gold" id="goLearn">Open lessons</button>
+    </div>
+    <div id="resumeBanner" class="banner hide">You have an exam in progress. <button class="btn" style="padding:5px 12px;margin-left:8px" id="resumeBtn">Resume</button></div>
+    <div class="grid g3">
+      <div class="card mode">
+        <h3>Certification exam</h3>
+        <p>Timed and scored, with no feedback until you submit. Your results are saved to your record.</p>
+        <ul><li><b id="nExam"></b> questions drawn from all sections</li><li><span id="nMin"></span>-minute time limit</li><li><span id="nPass"></span>% to pass</li></ul>
+        <button class="btn" id="startExam">Start exam</button>
+      </div>
+      <div class="card mode">
+        <h3>Section practice</h3>
+        <p>Untimed. See the answer and explanation right after each question.</p>
+        <select id="secSel"></select>
+        <button class="btn ghost" id="startPractice">Start practice</button>
+      </div>
+      <div class="card mode">
+        <h3>My history</h3>
+        <p>Your past exam attempts and the sections to focus on.</p>
+        <div id="myHist" class="note">Loading…</div>
+      </div>
+    </div>
+    <p class="note" style="margin-top:18px" id="bankInfo"></p>
+  </section>
+
+  <!-- LEARN -->
+  <section id="vLearn" class="hide">
+    <h1 style="font-size:28px">Learn</h1>
+    <p class="note" id="learnSub"></p>
+    <div class="tabs"><button class="tab on" data-t="mods">Lessons</button><button class="tab" data-t="cheat">Key numbers cheat sheet</button></div>
+    <div id="learnMods"></div>
+    <div id="learnCheat" class="hide card cheat"></div>
+  </section>
+
+  <!-- LESSON -->
+  <section id="vLesson" class="hide">
+    <div class="lesson">
+      <button class="btn ghost" id="backLearn" style="padding:6px 12px;font-size:13px">← All lessons</button>
+      <div style="margin-top:14px"><span class="pill" id="lsSec"></span> <span class="note" id="lsMeta"></span></div>
+      <h1 id="lsTitle"></h1>
+      <div class="card"><div class="body" id="lsBody"></div>
+        <div class="keybox"><h4>Key numbers &amp; rules</h4><table id="lsKeys"></table></div>
+        <div class="traps"><h4>Exam traps</h4><ul id="lsTraps"></ul></div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+          <button class="btn" id="lsPractice"></button>
+          <button class="btn ghost" id="lsDone">Mark lesson complete</button>
+          <span class="note" id="lsDoneNote"></span>
+        </div>
+        <div class="lnav"><button class="btn ghost" id="lsPrev">← Previous lesson</button><button class="btn ghost" id="lsNext">Next lesson →</button></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- EXAM -->
+  <section id="vExam" class="hide">
+    <div class="examgrid">
+      <div class="card">
+        <div class="qhead">
+          <div><span class="qnum" id="qNum"></span> <span class="pill" id="qSec"></span></div>
+          <button class="flagbtn" id="flagBtn">⚑ Flag for review</button>
+        </div>
+        <details class="ratebox hide" id="rateBox" open>
+          <summary>Reference: Acme Title Insurance Co. hypothetical rate charts (per $1,000, round UP to the next $1,000)</summary>
+          <div class="rt">
+            <div><h4>Owner's — full</h4><table><tr><td>Up to $100,000</td><td>$7</td></tr><tr><td>$100,001–$200,000</td><td>$6</td></tr><tr><td>$200,001–$500,000</td><td>$5</td></tr><tr><td>Over $500,000</td><td>$4</td></tr></table></div>
+            <div><h4>Owner's — reissue</h4><table><tr><td>Up to $100,000</td><td>$5</td></tr><tr><td>$100,001–$200,000</td><td>$4</td></tr><tr><td>$200,001–$500,000</td><td>$3</td></tr><tr><td>Over $500,000</td><td>$2</td></tr></table></div>
+            <div><h4>Loan — full</h4><table><tr><td>Up to $100,000</td><td>$6</td></tr><tr><td>$100,001–$200,000</td><td>$5</td></tr><tr><td>$200,001–$500,000</td><td>$4</td></tr><tr><td>Over $500,000</td><td>$3</td></tr></table></div>
+            <div><h4>Loan — reissue</h4><table><tr><td>Up to $100,000</td><td>$4</td></tr><tr><td>$100,001–$200,000</td><td>$3</td></tr><tr><td>$200,001–$500,000</td><td>$2</td></tr><tr><td>Over $500,000</td><td>$1</td></tr></table><div class="note" style="margin-top:6px">Simultaneous-issue loan fee: $35</div></div>
+          </div>
+        </details>
+        <div class="qtext" id="qText"></div>
+        <div id="qOpts"></div>
+        <div id="qExplain"></div>
+        <div class="qfoot">
+          <button class="btn ghost" id="prevBtn">← Previous</button>
+          <div style="display:flex;gap:8px">
+            <button class="btn ghost hide" id="checkBtn">Check answer</button>
+            <button class="btn" id="nextBtn">Next →</button>
+          </div>
+        </div>
+      </div>
+      <aside class="card side">
+        <div class="note" id="sideLabel">Time remaining</div>
+        <div class="timer" id="timer">—</div>
+        <div class="note" id="progTxt" style="margin-top:6px"></div>
+        <div class="dots" id="dots"></div>
+        <div class="legend"><span><i style="background:var(--navy)"></i>Answered</span><span><i style="background:#fff;border:1px solid var(--line);box-shadow:inset 0 -3px 0 var(--flag)"></i>Flagged</span></div>
+        <button class="btn gold" style="width:100%;margin-top:16px" id="submitBtn">Submit exam</button>
+        <button class="btn ghost" style="width:100%;margin-top:8px" id="quitBtn">Quit</button>
+      </aside>
+    </div>
+  </section>
+
+  <!-- RESULTS -->
+  <section id="vResult" class="hide">
+    <div class="card" style="margin-bottom:16px">
+      <div class="score">
+        <div><div class="big" id="rPct"></div><div class="note" id="rRaw"></div></div>
+        <div><h2 id="rVerdict"></h2><div class="note" id="rMeta"></div><div class="note" id="rSaved" style="margin-top:4px"></div></div>
+        <div class="sp" style="flex:1"></div>
+        <button class="btn ghost hide" id="backToLesson">Back to lesson</button>
+        <button class="btn" id="againBtn">Back to course</button>
+      </div>
+      <h3 style="margin:22px 0 6px;font-size:17px">Score by section</h3>
+      <div id="rSecs"></div>
+    </div>
+    <div class="card">
+      <h3 style="font-size:17px">Answer review</h3>
+      <div class="filters" id="rFilters">
+        <button class="chip on" data-f="all">All</button>
+        <button class="chip" data-f="wrong">Missed</button>
+        <button class="chip" data-f="flag">Flagged</button>
+      </div>
+      <div id="rList"></div>
+    </div>
+  </section>
+
+  <!-- ADMIN -->
+  <section id="vAdmin" class="hide">
+    <h1 style="font-size:26px">Admin</h1>
+    <p class="note">Invite team members and track their progress. Only admins can see this page.</p>
+    <div class="twocol" style="margin:16px 0">
+      <div class="card">
+        <h3 style="font-size:17px;margin-bottom:6px">Invite people</h3>
+        <p class="note" style="margin-top:0">One per line: <b>email</b>, or <b>Name, email</b>.</p>
+        <div class="field"><textarea id="invList" rows="5" placeholder="Jane Smith, jane@clatitle.com&#10;mark@clatitle.com"></textarea></div>
+        <div class="field"><label>Role</label><select id="invRole"><option value="learner">Team member</option><option value="admin">Admin (can invite and see results)</option></select></div>
+        <label style="font-size:14px;display:flex;gap:8px;align-items:center;margin-bottom:12px"><input type="checkbox" id="invSend" checked style="width:auto;margin:0"> Email each person a sign-in link now</label>
+        <button class="btn" id="invBtn">Invite</button>
+        <div id="invMsg"></div>
+      </div>
+      <div class="card">
+        <h3 style="font-size:17px;margin-bottom:6px">Course</h3>
+        <select id="admCourse"></select>
+        <div class="kpis" id="mKpis" style="grid-template-columns:repeat(2,1fr)"></div>
+      </div>
+    </div>
+    <div class="card" style="margin-bottom:16px">
+      <h3 style="font-size:17px;margin-bottom:8px">Team members</h3>
+      <div id="mTable" class="tablewrap note">Loading…</div>
+    </div>
+    <div class="twocol">
+      <div class="card"><h3 style="font-size:17px;margin-bottom:8px">Team average by section</h3><div id="mSecs"></div></div>
+      <div class="card"><h3 style="font-size:17px;margin-bottom:8px">Most-missed questions</h3><div id="mMissed"></div></div>
+    </div>
+  </section>
+</main>
+
+<div class="modal" id="modal"><div class="card">
+  <h3 id="mdT" style="font-size:19px;margin-bottom:8px"></h3>
+  <p id="mdB" class="note" style="font-size:14px"></p>
+  <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px">
+    <button class="btn ghost" id="mdNo">Cancel</button><button class="btn" id="mdYes">Confirm</button>
+  </div>
+</div></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="js/config.js"></script>
+<script src="courses/md-prelicense/course.js"></script>
+<!-- Add new courses here, e.g. <script src="courses/new-course/course.js"></script> -->
+<script src="js/backend.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
