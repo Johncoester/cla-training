@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>CLA Title Review</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&family=Source+Serif+4:opsz,wght@8..60,600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<style>
+:root {
+  /* Layout: a left work column (upload, then results) with tabs for History and Rules. */
+  --ink: #1d2733;
+  --muted: #5d6b7a;
+  --paper: #f5f7f9;
+  --card: #ffffff;
+  --line: #d9e0e7;
+  --accent: #1f5a8a;
+  --accent-soft: #e4eef7;
+  --crit: #b3261e; --crit-soft: #fbe9e7;
+  --high: #b25e00; --high-soft: #fdf0e1;
+  --med: #6b6f00; --med-soft: #f4f4dc;
+  --low: #3d6b4a; --low-soft: #e6f2ea;
+  --font-display: "Source Serif 4", Georgia, serif;
+  --font-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --ink: #e3e9ef; --muted: #9aa8b6; --paper: #11161c; --card: #19212a; --line: #2c3743;
+    --accent: #7db4e3; --accent-soft: #1d3247;
+    --crit: #ff8a80; --crit-soft: #3a1c1a; --high: #ffb869; --high-soft: #3a2a14;
+    --med: #d9dc7a; --med-soft: #2f301a; --low: #8fd0a2; --low-soft: #1a3022;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --ink: #e3e9ef; --muted: #9aa8b6; --paper: #11161c; --card: #19212a; --line: #2c3743;
+  --accent: #7db4e3; --accent-soft: #1d3247;
+  --crit: #ff8a80; --crit-soft: #3a1c1a; --high: #ffb869; --high-soft: #3a2a14;
+  --med: #d9dc7a; --med-soft: #2f301a; --low: #8fd0a2; --low-soft: #1a3022;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body { background: var(--paper); color: var(--ink); font: 15px/1.5 var(--font-body); }
+header { background: var(--card); border-bottom: 1px solid var(--line); }
+.wrap { max-width: 1080px; margin: 0 auto; padding: 0 20px; }
+.top { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 16px 0 0; flex-wrap: wrap; }
+h1 { font: 600 24px/1.2 var(--font-display); margin: 0; text-wrap: balance; }
+.sub { color: var(--muted); font-size: 13px; }
+nav { display: flex; gap: 4px; margin-top: 12px; }
+nav button { background: none; border: 0; border-bottom: 3px solid transparent; padding: 10px 14px; font: 500 14px var(--font-body); color: var(--muted); cursor: pointer; }
+nav button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--accent); }
+main { padding: 24px 0 64px; }
+.view { display: none; }
+.view.active { display: grid; gap: 20px; }
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 20px; }
+.card h2 { font: 600 17px/1.3 var(--font-body); margin: 0 0 4px; }
+.card p.hint { color: var(--muted); margin: 0 0 16px; font-size: 13.5px; }
+.grid { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); }
+label { display: grid; gap: 6px; font-size: 13px; font-weight: 500; }
+input[type=text], select, textarea { font: 14px var(--font-body); color: var(--ink); background: var(--paper); border: 1px solid var(--line); border-radius: 6px; padding: 9px 10px; width: 100%; }
+textarea { min-height: 70px; resize: vertical; }
+input:focus-visible, select:focus-visible, textarea:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.drops { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); margin-top: 16px; }
+.drop { border: 1.5px dashed var(--line); border-radius: 8px; padding: 14px; background: var(--paper); display: grid; gap: 6px; cursor: pointer; }
+.drop.over { border-color: var(--accent); background: var(--accent-soft); }
+.drop strong { font-size: 14px; }
+.drop .req { color: var(--crit); font-weight: 600; font-size: 12px; }
+.drop .opt { color: var(--muted); font-size: 12px; }
+.drop ul { margin: 4px 0 0; padding-left: 18px; font-size: 12.5px; color: var(--muted); }
+.drop input { display: none; }
+.actions { display: flex; gap: 10px; align-items: center; margin-top: 18px; flex-wrap: wrap; }
+.btn { font: 600 14px var(--font-body); border-radius: 6px; padding: 10px 18px; cursor: pointer; border: 1px solid var(--accent); background: var(--accent); color: var(--card); }
+.btn.ghost { background: transparent; color: var(--accent); }
+.btn:disabled { opacity: .5; cursor: not-allowed; }
+.note { font-size: 13px; color: var(--muted); }
+.warn { background: var(--high-soft); color: var(--ink); border: 1px solid var(--line); border-left: 4px solid var(--high); padding: 10px 14px; border-radius: 6px; font-size: 13.5px; }
+.err { background: var(--crit-soft); border-left: 4px solid var(--crit); padding: 10px 14px; border-radius: 6px; font-size: 13.5px; }
+.steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.steps li { display: flex; gap: 10px; align-items: baseline; font-size: 14px; color: var(--muted); }
+.steps li::before { content: ""; width: 10px; height: 10px; border-radius: 50%; border: 2px solid var(--line); flex: none; transform: translateY(1px); }
+.steps li.doing { color: var(--ink); font-weight: 500; }
+.steps li.doing::before { border-color: var(--accent); background: var(--accent-soft); }
+.steps li.done { color: var(--ink); }
+.steps li.done::before { background: var(--low); border-color: var(--low); }
+.summary { display: grid; gap: 16px; grid-template-columns: 1.4fr 1fr; }
+@media (max-width: 760px) { .summary { grid-template-columns: 1fr; } }
+.verdict { border-radius: 8px; padding: 16px; display: grid; gap: 6px; }
+.verdict.ready { background: var(--low-soft); border-left: 5px solid var(--low); }
+.verdict.curative_needed { background: var(--high-soft); border-left: 5px solid var(--high); }
+.verdict.escalate { background: var(--crit-soft); border-left: 5px solid var(--crit); }
+.verdict .label { font: 700 12px var(--font-body); letter-spacing: .06em; text-transform: uppercase; }
+.verdict .head { font: 600 18px/1.35 var(--font-display); text-wrap: balance; }
+.counts { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 6px; }
+.chip { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 99px; background: var(--paper); border: 1px solid var(--line); white-space: nowrap; }
+.chip.CRITICAL { background: var(--crit-soft); color: var(--crit); border-color: transparent; }
+.chip.HIGH { background: var(--high-soft); color: var(--high); border-color: transparent; }
+.chip.MEDIUM { background: var(--med-soft); color: var(--med); border-color: transparent; }
+.chip.LOW { background: var(--low-soft); color: var(--low); border-color: transparent; }
+.chip.missed { background: var(--accent); color: var(--card); border-color: transparent; }
+dl.facts { display: grid; grid-template-columns: max-content 1fr; gap: 6px 14px; margin: 0; font-size: 13.5px; }
+dl.facts dt { color: var(--muted); }
+dl.facts dd { margin: 0; overflow-wrap: anywhere; }
+.mono { font-family: var(--font-mono); font-size: 12.5px; }
+.finding { background: var(--card); border: 1px solid var(--line); border-left: 5px solid var(--line); border-radius: 8px; padding: 16px 18px; display: grid; gap: 10px; }
+.finding.CRITICAL { border-left-color: var(--crit); }
+.finding.HIGH { border-left-color: var(--high); }
+.finding.MEDIUM { border-left-color: var(--med); }
+.finding.LOW { border-left-color: var(--low); }
+.finding h3 { margin: 0; font: 600 15.5px/1.35 var(--font-body); }
+.finding .meta { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.finding .rows { display: grid; grid-template-columns: max-content 1fr; gap: 4px 14px; font-size: 13.5px; }
+.finding .rows div:nth-child(odd) { color: var(--muted); }
+.fb { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; border-top: 1px solid var(--line); padding-top: 10px; }
+.fb button { font: 500 13px var(--font-body); padding: 6px 12px; border-radius: 99px; border: 1px solid var(--line); background: var(--paper); color: var(--ink); cursor: pointer; }
+.fb button[aria-pressed="true"].v-correct { background: var(--low-soft); border-color: var(--low); color: var(--low); }
+.fb button[aria-pressed="true"].v-wrong { background: var(--crit-soft); border-color: var(--crit); color: var(--crit); }
+.fb button[aria-pressed="true"].v-not_needed { background: var(--med-soft); border-color: var(--med); color: var(--med); }
+.fb .fbnote { flex: 1 1 220px; display: flex; gap: 6px; }
+.fb .fbnote input { flex: 1; padding: 6px 9px; font-size: 13px; }
+.fb .saved { font-size: 12px; color: var(--low); }
+.section-title { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.section-title h2 { font: 600 18px var(--font-display); margin: 0; }
+.list { display: grid; gap: 12px; }
+table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { color: var(--muted); font-weight: 500; font-size: 12.5px; }
+.tablewrap { overflow-x: auto; }
+.st-ok { color: var(--low); font-weight: 600; }
+.st-issue { color: var(--crit); font-weight: 600; }
+.st-missing { color: var(--high); font-weight: 600; }
+pre.qnote { white-space: pre-wrap; font: 13px/1.55 var(--font-mono); background: var(--paper); border: 1px solid var(--line); border-radius: 6px; padding: 14px; margin: 0; }
+ol.qs { margin: 0; padding-left: 20px; display: grid; gap: 6px; font-size: 14px; }
+.hist-row { cursor: pointer; }
+.hist-row:hover td { background: var(--accent-soft); }
+.rules-text { white-space: pre-wrap; font-size: 13.5px; max-width: 75ch; }
+.hidden { display: none !important; }
+@media (prefers-reduced-motion: no-preference) { .finding { transition: border-color .2s; } }
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <div class="top">
+      <div>
+        <h1>CLA Title Review</h1>
+        <div class="sub">Upload a search package and draft commitment. Claude reviews them against CLA's title rules, and your feedback teaches it.</div>
+      </div>
+      <label for="reviewer" class="sub" style="min-width:200px">Your name
+        <input type="text" id="reviewer" placeholder="e.g. Eve Vertido" autocomplete="name">
+      </label>
+    </div>
+    <nav role="tablist">
+      <button role="tab" aria-selected="true" data-view="review">New review</button>
+      <button role="tab" aria-selected="false" data-view="history">Past reviews</button>
+      <button role="tab" aria-selected="false" data-view="rules">Rules the AI follows</button>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="view active" id="view-review">
+    <form class="card" id="form">
+      <h2>1. File details</h2>
+      <p class="hint">Use the Qualia file number so feedback lines up with the file.</p>
+      <div class="grid">
+        <label for="fileNo">File number
+          <input type="text" id="fileNo" placeholder="MD-26-31956" autocomplete="off">
+        </label>
+        <label for="state">State
+          <select id="state"><option>MD</option><option>DC</option><option>VA</option><option>FL</option></select>
+        </label>
+        <label for="txType">Transaction
+          <select id="txType"><option>Purchase</option><option>Refinance</option><option>Cash purchase</option><option>HELOC / 2nd</option><option>Commercial</option><option>REO / foreclosure purchase</option></select>
+        </label>
+        <label for="underwriter">Underwriter
+          <select id="underwriter"><option>Fidelity National (FNTIC)</option><option>Doma / NATIC</option><option>Other</option></select>
+        </label>
+      </div>
+
+      <h2 style="margin-top:22px">2. Upload PDFs</h2>
+      <p class="hint">Drag files onto a box or click it. Scanned pages are fine. Up to about 100 pages and 30 MB per review.</p>
+      <div class="drops">
+        <div class="drop" data-slot="search" tabindex="0" role="button" aria-label="Upload search package">
+          <strong>Search package</strong><span class="req">Required</span>
+          <span class="opt">Abstract, run sheet, deeds, DOTs, judgments, taxes</span>
+          <input type="file" accept="application/pdf" multiple id="f-search">
+          <ul></ul>
+        </div>
+        <div class="drop" data-slot="commitment" tabindex="0" role="button" aria-label="Upload draft commitment">
+          <strong>Draft commitment</strong><span class="opt">Recommended: lets the AI list what the team missed</span>
+          <input type="file" accept="application/pdf" multiple id="f-commitment">
+          <ul></ul>
+        </div>
+        <div class="drop" data-slot="other" tabindex="0" role="button" aria-label="Upload other documents">
+          <strong>Other documents</strong><span class="opt">Update search, contract, lender instructions, survey, payoffs</span>
+          <input type="file" accept="application/pdf" multiple id="f-other">
+          <ul></ul>
+        </div>
+      </div>
+
+      <label for="notes" style="margin-top:16px">Notes for the reviewer (optional)
+        <textarea id="notes" placeholder="Example: seller is an estate; buyer taking title as an LLC; lender requires ALTA 9"></textarea>
+      </label>
+
+      <div class="actions">
+        <button class="btn" type="submit" id="run">Run review</button>
+        <span class="note" id="runNote"></span>
+      </div>
+    </form>
+
+    <div class="card hidden" id="progress">
+      <h2>Working</h2>
+      <ul class="steps" id="steps"></ul>
+      <p class="note" id="progNote" style="margin:12px 0 0"></p>
+    </div>
+
+    <div id="results" class="hidden" style="display:grid;gap:20px"></div>
+  </section>
+
+  <section class="view" id="view-history">
+    <div class="card">
+      <div class="section-title"><h2>Past reviews</h2><span class="note" id="histNote"></span></div>
+      <div class="tablewrap" style="margin-top:12px">
+        <table>
+          <thead><tr><th>Date</th><th>File</th><th>Type</th><th>By</th><th>Result</th><th>Findings</th><th>Team missed</th><th>Feedback</th><th>Cost</th></tr></thead>
+          <tbody id="histBody"><tr><td colspan="9" class="note">Loading…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <section class="view" id="view-rules">
+    <div class="card">
+      <h2>Rules the AI follows</h2>
+      <p class="hint">Built from Eve's Title &amp; Curative Operations manual, the Trainual title curriculum, the CHECKLIST workbook and the MLTA pre-licensing course. Claude updates them each week from the team's feedback.</p>
+      <p class="note" id="rulesVer"></p>
+      <div class="rules-text" id="rulesText">Loading…</div>
+    </div>
+  </section>
+</main>
+
+<script>
+const CFG = { url: "https://upkrpewcsvfltqwmxmjs.supabase.co", key: "sb_publishable_L1f8ADmFXkPqsSGvLMibDA_6uah2q6v" };
+const FN = CFG.url + "/functions/v1/title-review";
+const BUCKET = "title-review";
+const sb = window.supabase ? window.supabase.createClient(CFG.url, CFG.key) : null;
+const files = { search: [], commitment: [], other: [] };
+const $ = (s, el = document) => el.querySelector(s);
+const esc = (s) => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+
+async function api(action, data = {}) {
+  const r = await fetch(FN, { method: "POST", headers: { "Content-Type": "application/json", apikey: CFG.key }, body: JSON.stringify({ action, ...data }) });
+  let out = {};
+  try { out = await r.json(); } catch (e) {}
+  if (!r.ok || out.error) throw new Error(out.error || ("The review service didn't answer (" + r.status + "). Try again in a minute."));
+  return out;
+}
+
+/* reviewer name, remembered in this browser */
+try { $("#reviewer").value = localStorage.getItem("clatr_name") || ""; } catch (e) {}
+$("#reviewer").addEventListener("change", () => { try { localStorage.setItem("clatr_name", $("#reviewer").value.trim()); } catch (e) {} });
+const reviewer = () => $("#reviewer").value.trim();
+
+/* tabs */
+document.querySelectorAll("nav button").forEach(b => b.addEventListener("click", () => showView(b.dataset.view)));
+function showView(v) {
+  document.querySelectorAll("nav button").forEach(b => b.setAttribute("aria-selected", String(b.dataset.view === v)));
+  document.querySelectorAll(".view").forEach(s => s.classList.toggle("active", s.id === "view-" + v));
+  if (v === "history") loadHistory();
+  if (v === "rules") loadRules();
+}
+
+/* uploads */
+document.querySelectorAll(".drop").forEach(d => {
+  const slot = d.dataset.slot, input = $("input", d);
+  d.addEventListener("click", (e) => { if (e.target.tagName !== "BUTTON") input.click(); });
+  d.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); input.click(); } });
+  input.addEventListener("change", () => { addFiles(slot, input.files); input.value = ""; });
+  d.addEventListener("dragover", (e) => { e.preventDefault(); d.classList.add("over"); });
+  d.addEventListener("dragleave", () => d.classList.remove("over"));
+  d.addEventListener("drop", (e) => { e.preventDefault(); d.classList.remove("over"); addFiles(slot, e.dataTransfer.files); });
+});
+function addFiles(slot, list) {
+  for (const f of list) if (f.type === "application/pdf" || /\.pdf$/i.test(f.name)) files[slot].push(f);
+  renderFileList(slot);
+}
+function renderFileList(slot) {
+  const ul = $(`.drop[data-slot="${slot}"] ul`);
+  ul.innerHTML = files[slot].map((f, i) => `<li>${esc(f.name)} (${(f.size / 1048576).toFixed(1)} MB) <button type="button" data-rm="${i}" style="border:0;background:none;color:var(--crit);cursor:pointer;font-size:12px">remove</button></li>`).join("");
+  ul.querySelectorAll("button[data-rm]").forEach(b => b.addEventListener("click", (e) => {
+    e.stopPropagation(); files[slot].splice(Number(b.dataset.rm), 1); renderFileList(slot);
+  }));
+}
+
+/* progress */
+const STEPS = ["Uploading PDFs", "Starting", "Claude is reviewing", "Done"];
+function setStep(i, note) {
+  $("#steps").innerHTML = STEPS.map((s, k) => `<li class="${k < i ? "done" : k === i ? "doing" : ""}">${s}</li>`).join("");
+  $("#progNote").textContent = note || "";
+}
+
+/* run */
+$("#form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  if (!files.search.length) { $("#runNote").textContent = "Add the search package first."; return; }
+  if (!reviewer()) { $("#runNote").textContent = "Type your name at the top first, so feedback is credited to you."; $("#reviewer").focus(); return; }
+  if (!sb) { $("#runNote").textContent = "The page didn't load fully. Refresh and try again."; return; }
+  const all = [...files.search.map(f => ({ f, kind: "search" })), ...files.commitment.map(f => ({ f, kind: "commitment" })), ...files.other.map(f => ({ f, kind: "other" }))];
+  const total = all.reduce((a, x) => a + x.f.size, 0);
+  if (total > 30 * 1048576) { $("#runNote").textContent = "These files add up to more than 30 MB. Remove duplicates or very large scans."; return; }
+  $("#runNote").textContent = "";
+  $("#run").disabled = true;
+  $("#progress").classList.remove("hidden"); $("#results").classList.add("hidden");
+  try {
+    setStep(0);
+    const meta = { file_no: $("#fileNo").value.trim(), state: $("#state").value, tx_type: $("#txType").value, underwriter: $("#underwriter").value, notes: $("#notes").value.trim(), reviewer_name: reviewer() };
+    const created = await api("create", { ...meta, files: all.map(x => ({ name: x.f.name, kind: x.kind, bytes: x.f.size })) });
+    for (let i = 0; i < all.length; i++) {
+      setStep(0, `${all[i].f.name} (${i + 1} of ${all.length})`);
+      const u = created.uploads[i];
+      const { error } = await sb.storage.from(BUCKET).uploadToSignedUrl(u.path, u.token, all[i].f, { contentType: "application/pdf" });
+      if (error) throw new Error("Upload failed for " + all[i].f.name + ". Check your connection and try again.");
+    }
+    setStep(1);
+    await api("start", { id: created.id });
+    const t0 = Date.now();
+    let rev = null;
+    while (true) {
+      await sleep(4000);
+      const g = await api("get", { id: created.id });
+      rev = g.review;
+      const secs = Math.round((Date.now() - t0) / 1000);
+      setStep(2, `${rev.progress || "Working"} · ${Math.floor(secs / 60)}m ${secs % 60}s`);
+      if (rev.status === "done" || rev.status === "error") break;
+      if (secs > 900) throw new Error("This is taking longer than 15 minutes. Check Past reviews later, or try again with fewer pages.");
+    }
+    if (rev.status === "error") throw new Error(rev.error || "The review failed. Try again.");
+    setStep(4);
+    $("#progress").classList.add("hidden");
+    renderResults(rev, {});
+    files.search = []; files.commitment = []; files.other = [];
+    ["search", "commitment", "other"].forEach(renderFileList);
+  } catch (err) {
+    $("#progress").classList.add("hidden");
+    const r = $("#results"); r.classList.remove("hidden");
+    r.innerHTML = `<div class="err">${esc(err.message || err)}</div>`;
+  } finally {
+    $("#run").disabled = false;
+  }
+});
+
+/* results */
+const PRI_ORDER = { CRITICAL: 0, HIGH: 1, MEDIUM: 2, LOW: 3 };
+const OVERALL = { ready: "Ready for package", curative_needed: "Curative needed", escalate: "Escalate" };
+const CATS = ["Ownership/Vesting","Mortgage/DOT","Judgment","Federal Tax Lien","State Tax Lien","Mechanics' Lien","Probate/Estate","Bankruptcy","Entity/LLC","Trust","HOA/Condo","Municipal/Utility","Easement/Restriction","Survey/Boundary","Foreclosure/Tax Sale","Recording Defect","Legal Description","Search Quality","Commitment Error","Other"];
+function renderResults(rev, fbMap) {
+  const r = rev.result || {}, s = r.summary || {};
+  const findings = [...(r.findings || [])].sort((a, b) => (PRI_ORDER[a.priority] ?? 9) - (PRI_ORDER[b.priority] ?? 9));
+  const missed = findings.filter(f => f.team_missed);
+  const count = (p) => findings.filter(f => f.priority === p).length;
+  const cost = rev.usage?.est_cost_usd;
+  const out = $("#results");
+  out.classList.remove("hidden");
+  out.innerHTML = `
+    <div class="card summary">
+      <div class="verdict ${esc(s.overall || "curative_needed")}">
+        <span class="label">${esc(OVERALL[s.overall] || "Review")} · ${esc(rev.file_no || "(no file number)")} · ${esc(rev.state)} ${esc(rev.tx_type)}</span>
+        <span class="head">${esc(s.headline || "")}</span>
+        <div class="counts">
+          ${missed.length ? `<span class="chip missed">Team missed: ${missed.length}</span>` : ""}
+          ${["CRITICAL", "HIGH", "MEDIUM", "LOW"].map(p => count(p) ? `<span class="chip ${p}">${count(p)} ${p.toLowerCase()}</span>` : "").join("")}
+        </div>
+      </div>
+      <dl class="facts">
+        <dt>Property</dt><dd>${esc(s.property)}</dd>
+        <dt>Vesting</dt><dd>${esc(s.vesting)}</dd>
+        <dt>Vesting deed</dt><dd class="mono">${esc(s.vesting_deed)}</dd>
+        <dt>Seller / Buyer</dt><dd>${esc(s.seller)} → ${esc(s.buyer)}</dd>
+        <dt>Lender</dt><dd>${esc(s.lender)}</dd>
+        <dt>Through date</dt><dd>${esc(s.through_date)}${s.commitment_date ? " · Commitment " + esc(s.commitment_date) : ""}</dd>
+        <dt>Open liens</dt><dd>${esc(s.open_mortgages)} mortgage(s), ${esc(s.judgments_liens)} judgment(s)/lien(s)</dd>
+      </dl>
+    </div>
+
+    ${missed.length ? `<div class="section-title"><h2>What the team missed</h2><span class="note">Items the draft commitment gets wrong or leaves out</span></div>
+    <div class="list">${missed.map(f => findingHtml(f, fbMap)).join("")}</div>` : ""}
+
+    <div class="section-title"><h2>All findings</h2><span class="note">Mark each one so the AI learns: Correct, Wrong, or Not needed.</span></div>
+    <div class="list">${findings.filter(f => !f.team_missed).map(f => findingHtml(f, fbMap)).join("") || '<p class="note">No other findings.</p>'}</div>
+
+    <div class="card">
+      <h2>The AI missed something?</h2>
+      <p class="hint">Tell it what a reviewer caught that isn't listed above. This is the most useful feedback you can give.</p>
+      <div class="grid">
+        <label for="mCat">Category<select id="mCat">${CATS.map(c => `<option>${c}</option>`).join("")}</select></label>
+        <label for="mPri">Priority<select id="mPri"><option>HIGH</option><option>CRITICAL</option><option>MEDIUM</option><option>LOW</option></select></label>
+      </div>
+      <label for="mText" style="margin-top:12px">What was missed, and where (recording reference or page)
+        <textarea id="mText" placeholder="Example: Open DOT to Wells Fargo, Liber 4521/112, page 14 of the search, not on the commitment"></textarea>
+      </label>
+      <div class="actions"><button class="btn" type="button" id="mSave">Save missed item</button><span class="note" id="mNote"></span></div>
+    </div>
+
+    ${(r.commitment_check || []).length ? `<div class="card"><h2>Commitment check</h2>
+      <div class="tablewrap"><table><thead><tr><th>Item</th><th>Status</th><th>Note</th></tr></thead><tbody>
+      ${r.commitment_check.map(c => `<tr><td>${esc(c.item)}</td><td class="st-${esc(c.status)}">${esc(c.status)}</td><td>${esc(c.note)}</td></tr>`).join("")}
+      </tbody></table></div></div>` : ""}
+
+    ${(r.questions || []).filter(Boolean).length ? `<div class="card"><h2>Answer before sending the title package</h2><ol class="qs">${r.questions.filter(Boolean).map(q => `<li>${esc(q)}</li>`).join("")}</ol></div>` : ""}
+
+    <div class="card">
+      <div class="section-title"><h2>Qualia title review note</h2><button class="btn ghost" type="button" id="copyNote">Copy note</button></div>
+      ${(r.qualia_tasks || []).filter(Boolean).length ? `<p class="note">Tasks to open: ${r.qualia_tasks.filter(Boolean).map(esc).join(", ")}</p>` : ""}
+      <pre class="qnote" id="qnote">${esc(r.qualia_note || "")}</pre>
+    </div>
+    <p class="note">The AI recommends; a reviewer clears every item and gives CTC.${cost != null ? ` Cost of this review: about $${Number(cost).toFixed(2)}.` : ""}</p>`;
+
+  out.querySelectorAll(".finding").forEach(el => wireFinding(el, rev));
+  $("#copyNote").addEventListener("click", async () => {
+    try { await navigator.clipboard.writeText($("#qnote").textContent); $("#copyNote").textContent = "Copied"; }
+    catch (e) { $("#copyNote").textContent = "Select the text to copy"; }
+  });
+  $("#mSave").addEventListener("click", async () => {
+    const note = $("#mText").value.trim();
+    if (!note) { $("#mNote").textContent = "Describe what was missed first."; return; }
+    $("#mSave").disabled = true;
+    try {
+      await api("feedback", { review_id: rev.id, verdict: "missed", category: $("#mCat").value, priority: $("#mPri").value, note, reviewer_name: reviewer() });
+      $("#mText").value = ""; $("#mNote").textContent = "Saved. Add another if needed.";
+    } catch (e) { $("#mNote").textContent = e.message; }
+    $("#mSave").disabled = false;
+  });
+  out.scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
+}
+
+function findingHtml(f, fbMap) {
+  const fb = fbMap[f.id] || {};
+  const row = (k, v) => v ? `<div>${k}</div><div>${esc(v)}</div>` : "";
+  return `<article class="finding ${esc(f.priority)}" data-id="${esc(f.id)}" data-title="${esc(f.title)}" data-cat="${esc(f.category)}" data-pri="${esc(f.priority)}">
+    <div class="meta">
+      <span class="chip ${esc(f.priority)}">${esc(f.priority)}</span>
+      <span class="chip">${esc(f.category)}</span>
+      ${f.team_missed ? '<span class="chip missed">Team missed</span>' : ""}
+      ${f.underwriter_review ? '<span class="chip">Underwriter review</span>' : ""}
+      ${f.confidence && f.confidence !== "high" ? `<span class="chip">${esc(f.confidence)} confidence</span>` : ""}
+    </div>
+    <h3>${esc(f.title)}</h3>
+    <div class="rows">
+      ${row("Recording ref", f.recording_ref)}${row("Parties", f.parties)}${row("Issue", f.issue)}${row("Why it matters", f.concern)}
+      ${row("Documents needed", f.documents_required)}${row("Action", f.action)}${row("Source", f.source)}
+    </div>
+    <div class="fb">
+      <button type="button" class="v-correct" data-v="correct" aria-pressed="${fb.verdict === "correct"}">Correct</button>
+      <button type="button" class="v-wrong" data-v="wrong" aria-pressed="${fb.verdict === "wrong"}">Wrong</button>
+      <button type="button" class="v-not_needed" data-v="not_needed" aria-pressed="${fb.verdict === "not_needed"}">Not needed</button>
+      <span class="fbnote"><input type="text" id="note-${esc(f.id)}" aria-label="Note on this finding" placeholder="Why? (optional)" value="${esc(fb.note || "")}"><button type="button" data-save="1">Save note</button></span>
+      <span class="saved">${fb.reviewer_name ? "Marked by " + esc(fb.reviewer_name) : ""}</span>
+    </div>
+  </article>`;
+}
+function wireFinding(el, rev) {
+  const id = el.dataset.id, saved = $(".saved", el);
+  let verdict = [...el.querySelectorAll("[data-v]")].find(b => b.getAttribute("aria-pressed") === "true")?.dataset.v || null;
+  const save = async () => {
+    saved.textContent = "Saving…";
+    try {
+      await api("feedback", { review_id: rev.id, finding_id: id, finding_title: el.dataset.title, category: el.dataset.cat, priority: el.dataset.pri, verdict: verdict || "note", note: $("input", el).value.trim(), reviewer_name: reviewer() });
+      saved.textContent = "Saved";
+    } catch (e) { saved.textContent = "Couldn't save. Try again."; }
+  };
+  el.querySelectorAll("[data-v]").forEach(b => b.addEventListener("click", () => {
+    verdict = b.dataset.v;
+    el.querySelectorAll("[data-v]").forEach(x => x.setAttribute("aria-pressed", String(x === b)));
+    save();
+  }));
+  $("[data-save]", el).addEventListener("click", save);
+  $("input", el).addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); save(); } });
+}
+
+/* history */
+async function loadHistory() {
+  const body = $("#histBody");
+  try {
+    const { reviews } = await api("list");
+    if (!reviews.length) { body.innerHTML = `<tr><td colspan="9" class="note">No reviews yet. Run the first one from New review.</td></tr>`; return; }
+    body.innerHTML = reviews.map(x => `<tr class="hist-row" data-id="${esc(x.id)}" tabindex="0">
+      <td>${esc(String(x.created_at).slice(0, 10))}</td><td class="mono">${esc(x.file_no || "-")}</td><td>${esc(x.state)} ${esc(x.tx_type)}</td><td>${esc(x.reviewer_name)}</td>
+      <td>${x.status === "done" ? esc(OVERALL[x.overall] || "") : esc(x.status)}</td><td>${esc(x.findings)}</td><td>${esc(x.missed)}</td><td>${esc(x.feedback)}</td>
+      <td>${x.cost != null ? "$" + Number(x.cost).toFixed(2) : ""}</td></tr>`).join("");
+    body.querySelectorAll(".hist-row").forEach(tr => {
+      const open = () => openReview(tr.dataset.id);
+      tr.addEventListener("click", open);
+      tr.addEventListener("keydown", (e) => { if (e.key === "Enter") open(); });
+    });
+  } catch (e) { body.innerHTML = `<tr><td colspan="9" class="note">${esc(e.message)}</td></tr>`; }
+}
+async function openReview(id) {
+  try {
+    const { review, feedback } = await api("get", { id });
+    if (review.status !== "done") { $("#histNote").textContent = review.status === "error" ? "That review failed: " + (review.error || "") : "That review is still running."; return; }
+    const fbMap = {};
+    feedback.forEach(f => { fbMap[f.finding_id] = f; });
+    showView("review");
+    $("#progress").classList.add("hidden");
+    renderResults(review, fbMap);
+  } catch (e) { $("#histNote").textContent = e.message; }
+}
+
+/* rules */
+async function loadRules() {
+  try {
+    const r = await api("rules");
+    $("#rulesVer").textContent = "Version " + r.version + (r.created_at ? " · updated " + String(r.created_at).slice(0, 10) : "");
+    $("#rulesText").textContent = r.text;
+  } catch (e) { $("#rulesText").textContent = e.message; }
+}
+</script>
+</body>
+</html>

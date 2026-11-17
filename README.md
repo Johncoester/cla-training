@@ -32,3 +32,9 @@ Everything is plain HTML/JS on Supabase. To move it into the portal, copy the co
 
 ## Content source
 Lessons and questions summarize the MLTA Title Insurance Pre-Licensing Course book (2013 edition). Federal items changed since then (HUD-1/GFE → TRID, FIRPTA rates) are intentionally left out.
+
+## Title Review tool (`/title-review/`)
+A separate tool for the title team at **https://training.clatitle.com/title-review/**. No sign-in (owner's choice for testing).
+- The page uploads PDFs to the private Supabase bucket `title-review` and calls the edge function `title-review` (project CLA Training).
+- The edge function sends the PDFs to the Claude API (key stored as the Supabase secret `ANTHROPIC_API_KEY`) with CLA's rule pack from `title_review.rules`, and saves results and team feedback in schema `title_review` (not reachable from the browser).
+- No client documents are stored in this repo.
