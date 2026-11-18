@@ -357,8 +357,18 @@ function renderQueue() {
 async function retry(i) {
   const q = queue[i];
   q.status = "running"; q.progress = "Starting again"; q.error = ""; q.startedAt = Date.now(); q.doneAt = null; renderQueue();
-  try { await api("start", { id: q.id }); } catch (e) { q.status = "error"; q.error = e.message; }
+  try { await api("start", { id: q.id }); } catch (e) { q.status = "error"; q.error = e.message; await refreshOne(q); }
   saveQueue(); renderQueue(); ensurePolling();
+}
+// Ask the server what really happened to a review (it may already be done or running).
+async function refreshOne(q) {
+  try {
+    const { reviews } = await api("status", { ids: [q.id] });
+    const r = reviews && reviews[0];
+    if (!r) return;
+    q.status = r.status === "uploading" ? "error" : r.status; q.progress = r.progress; q.error = r.error; q.cost = r.cost; q.overall = r.overall;
+    if (r.status === "done") q.doneAt = q.doneAt || Date.now();
+  } catch (e) { /* keep what we have */ }
 }
 function ensurePolling() {
   if (pollTimer) return;
@@ -387,7 +397,7 @@ $("#form").addEventListener("submit", async (e) => {
   if (!sb) { $("#runNote").textContent = "The page didn't load fully. Refresh and try again."; return; }
   const all = [...files.search.map(f => ({ f, kind: "search" })), ...files.commitment.map(f => ({ f, kind: "commitment" })), ...files.other.map(f => ({ f, kind: "other" }))];
   const total = all.reduce((a, x) => a + x.f.size, 0);
-  if (total > 30 * 1048576) { $("#runNote").textContent = "These files add up to more than 30 MB. Remove duplicates or very large scans."; return; }
+  if (total > 25 * 1048576) { $("#runNote").textContent = "These files add up to more than 25 MB. Leave out the contract or other extras, or split the search package."; return; }
   const meta = { file_no: $("#fileNo").value.trim(), state: $("#state").value, tx_type: $("#txType").value, underwriter: $("#underwriter").value, notes: $("#notes").value.trim(), reviewer_name: reviewer() };
   const q = { id: null, file_no: meta.file_no, status: "uploading", progress: "Uploading PDFs", startedAt: Date.now() };
   queue.unshift(q);
@@ -416,6 +426,8 @@ $("#form").addEventListener("submit", async (e) => {
 });
 queue.forEach(q => { if (q.status === "uploading") { q.status = "error"; q.error = "The upload was interrupted when the page closed. Add the file again."; q.id = null; } });
 renderQueue();
+// Rows that show a problem may have been fixed or finished since; check them once on load.
+Promise.all(queue.filter(q => q.id && q.status === "error").map(refreshOne)).then(() => { saveQueue(); renderQueue(); });
 if (queue.some(q => q.status === "running" || q.status === "queued")) ensurePolling();
 
 /* results */
