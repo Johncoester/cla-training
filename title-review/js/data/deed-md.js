@@ -237,7 +237,8 @@ function sameName(a, b) {
   const hits = small.filter((t) => big.includes(t) || big.some((u) => u.startsWith(t) || t.startsWith(u))).length;
   return hits >= Math.min(2, small.length) && hits >= small.length - 1;
 }
-function exact(a, b) { return nameKey(a).replace(/\s/g, '') === nameKey(b).replace(/\s/g, ''); }
+// word order and capitals don't count as a difference (SDAT writes SMITH JOHN A); spelling does
+function exact(a, b) { const s = (n) => tokens(n).sort().join(' '); return s(a) === s(b); }
 export function compareNames(listA, listB) {
   const missing = [], spelled = [];
   for (const a of listA) {
