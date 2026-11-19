@@ -62,13 +62,15 @@ export function amountWords(amount) {
 }
 
 /* ---------- parties ---------- */
+// an entity descriptor goes into the deed only if it reads like one ("a Maryland limited liability company"); notes never do
+const desc = (d) => { const t = clean(d); return /^(a|an)\s/i.test(t) && !/[()]|see |to be |flag|confirm|unknown/i.test(t) ? t : ''; };
 // facts.grantors: [{ name, kind: 'individual'|'personal_representative'|'entity'|'trustee', estateOf, decedentDiedOn, entityDesc, signer, signerTitle }]
 // facts.grantees: [{ name, kind: 'individual'|'entity', entityDesc, gender: 'F'|'M'|'' }], facts.tenancy, facts.granteesMarried
 function grantorClause(f) {
   const g = f.grantors || [];
   const prs = g.filter((x) => x.kind === 'personal_representative');
   const others = g.filter((x) => x.kind !== 'personal_representative').map((x) =>
-    x.kind === 'entity' ? `${clean(x.name)}${x.entityDesc ? ', ' + clean(x.entityDesc) : ''}`
+    x.kind === 'entity' ? `${clean(x.name)}${desc(x.entityDesc) ? ', ' + desc(x.entityDesc) : ''}`
       : x.kind === 'trustee' ? (/trustee/i.test(x.name) ? clean(x.name) : `${clean(x.name)}${x.trustName ? `, Trustee of the ${clean(x.trustName)}` : ', Trustee'}`)
         : clean(x.name));
   const parts = [...others];
@@ -96,7 +98,7 @@ function granteeNames(f) { return listAnd((f.grantees || []).map((x) => clean(x.
 // first paragraph: names, marital status and tenancy (IMPORTANT NOTES 1)
 function granteeClause(f) {
   const e = f.grantees || [];
-  if (f.tenancy === 'entity') return listAnd(e.map((x) => `${clean(x.name)}${x.entityDesc ? ', ' + clean(x.entityDesc) : ''}`));
+  if (f.tenancy === 'entity') return listAnd(e.map((x) => `${clean(x.name)}${desc(x.entityDesc) ? ', ' + desc(x.entityDesc) : ''}`));
   if (f.tenancy === 'sole') return `${granteeNames(f)}, Sole Owner`;
   return [granteeNames(f), maritalPhrase(f), tenancyPhrase(f)].filter(Boolean).join(', ');
 }
@@ -226,6 +228,15 @@ export function splitNames(list) {
 // The same person written two ways should match ("John A. Smith", "SMITH JOHN A", "John C Gaughan Revocable Trust" vs
 // "John C. Gaughan, Trustee of the John C. Gaughan Revocable Trust"); a different person should not. Match = same first and last
 // name tokens in any order, and middle names/initials that don't conflict.
+// small spelling slips ("Josephina" / "Josefina", "Bayn" / "Bayne") still point to the same person; the checklist flags them as spelled differently
+function near(a, b) {
+  if (a === b || a.startsWith(b) || b.startsWith(a)) return true;
+  if (Math.min(a.length, b.length) < 5) return false;
+  const d = Array.from({ length: a.length + 1 }, (_, i) => [i, ...Array(b.length).fill(0)]);
+  for (let j = 1; j <= b.length; j++) d[0][j] = j;
+  for (let i = 1; i <= a.length; i++) for (let j = 1; j <= b.length; j++) d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+  return d[a.length][b.length] <= 2;
+}
 function sameName(a, b) {
   const A = tokens(a), Bt = tokens(b);
   if (!A.length || !Bt.length) return false;
@@ -234,7 +245,7 @@ function sameName(a, b) {
   const [small, big] = aFull.length <= bFull.length ? [aFull, bFull] : [bFull, aFull];
   if (!small.length) return false;
   if (small.length === 1) return big.length === 1 && big[0] === small[0];
-  const hits = small.filter((t) => big.includes(t) || big.some((u) => u.startsWith(t) || t.startsWith(u))).length;
+  const hits = small.filter((t) => big.some((u) => near(t, u))).length;
   return hits >= Math.min(2, small.length) && hits >= small.length - 1;
 }
 // word order and capitals don't count as a difference (SDAT writes SMITH JOHN A); spelling does
@@ -260,7 +271,7 @@ export function checkDeed(facts) {
   // 1. file review
   add('1. File review', f.propertyAddress ? 'ok' : 'flag', f.propertyAddress ? `Property address: ${clean(String(f.propertyAddress).replace(/\n/g, ', '))}.` : 'Property address is missing.');
   add('1. File review', f.county ? 'ok' : 'flag', f.county ? `County: ${countyName(f)}, Maryland.` : 'County is missing.');
-  const taxOk = /^\d{2}-\d{6,10}$/.test(clean(f.taxId)) || /^\d{2}-\d{2}-\d{4}-\d{3}/.test(clean(f.taxId));
+  const taxOk = /^\d{2}(-\d{1,8}){1,4}$/.test(clean(f.taxId)) && clean(f.taxId).replace(/-/g, '').length >= 8;   // 02-03414356, 15-06-3006-018, 06-000-06914600
   add('1. File review', taxOk ? 'ok' : 'flag', taxOk ? `Tax ID ${clean(f.taxId)}.` : `Tax ID "${clean(f.taxId) || 'missing'}" doesn't look like a Maryland account number (district-account, e.g. 02-03414356). Check SDAT.`);
   const p = f.priorDeed || {};
   const priorOk = p.liber && p.folio && p.dated && p.recorded && p.from && p.to;
@@ -299,6 +310,7 @@ export function checkDeed(facts) {
     if (!c.missing.length) add('2. Parties', 'ok', `Grantees match the buyers on the contract: ${listAnd(buyers)}.`);
   } else add('2. Parties', 'flag', 'Buyers were not found in the contract.');
 
+  for (const x of f.grantees || []) if (/\btrust\b/i.test(x.name) && !/trustee/i.test(x.name)) add('2. Parties', 'flag', `"${clean(x.name)}" is a trust. A trust takes title through its trustees: the grantee must read "[names], Trustees of the [trust name] dated [date]". Get the trustees' names and the trust date before the deed goes out.`);
   // tenancy rules + IMPORTANT NOTES
   const n = (f.grantees || []).length;
   if (f.tenancy === 'sole' && n !== 1) add('2. Parties', 'flag', `"Sole Owner" but there are ${n} grantees.`);

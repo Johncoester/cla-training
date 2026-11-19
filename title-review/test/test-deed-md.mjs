@@ -66,4 +66,10 @@ const trust = norm(deedText(buildDeed({ ...tbe, grantors: [{ name: 'John C. Gaug
 ok(trust.includes('between John C. Gaughan, Trustee of the John C. Gaughan Revocable Trust, party of the first part') && !trust.includes('Trust, Trustee of'), 'trustee named once');
 const lead = norm(deedText(buildDeed({ ...tbe, legalDescription: "All that lot of ground situate in the County of Prince George's, State of Maryland and described as follows, that is to say:\n\nBeing known and designated as Lot numbered Seven (7)." })));
 ok(!/that is to say: All that lot/i.test(lead) && lead.includes('Being known and designated as Lot numbered Seven (7).'), "record's lead-in removed from Exhibit A");
+const js = compareNames(['Josefina A. Shakeshaft, Trustee of the Josefina A. Shakeshaft Revocable Trust'], ['Josephina A. Shakeshaft']);
+ok(!js.missing.length && js.spelled.length === 1, 'Josephina vs Josefina: same person, flagged as spelled differently');
+ok(checkDeed({ ...tbe, taxId: '06-000-06914600' }).some((x) => x.status === 'ok' && /Tax ID 06-000-06914600/.test(x.text)), 'Anne Arundel tax ID format accepted');
+const tg = norm(deedText(buildDeed({ ...tbe, tenancy: 'entity', grantees: [{ name: 'DOOLITTLE SCALISE FAMILY TRUST', kind: 'entity', entityDesc: 'a trust (trustees to be named; see flags)' }] })));
+ok(!/see flags|to be named/.test(tg), 'AI notes never printed in the deed');
+ok(checkDeed({ ...tbe, tenancy: 'entity', grantees: [{ name: 'DOOLITTLE SCALISE FAMILY TRUST', kind: 'entity' }] }).some((x) => /takes title through its trustees/.test(x.text)), 'trust as grantee needs trustees');
 console.log(fail ? `\n${fail} failed` : '\nall passed'); process.exit(fail ? 1 : 0);
