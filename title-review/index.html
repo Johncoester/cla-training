@@ -306,6 +306,9 @@ const files = { search: [], commitment: [], contract: [], other: [] };
 const $ = (s, el = document) => el.querySelector(s);
 const esc = (s) => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+// defined up here: the In-progress list uses them while the page is still loading
+const PRI_ORDER = { CRITICAL: 0, HIGH: 1, MEDIUM: 2, LOW: 3 };
+const OVERALL = { ready: "Ready for package", curative_needed: "Curative needed", escalate: "Escalate" };
 
 // the deed service is separate (movable on its own); same call shape
 async function dapi(action, data = {}) {
@@ -481,8 +484,6 @@ Promise.all(queue.filter(q => q.id && q.status === "error").map(refreshOne)).the
 if (queue.some(q => q.status === "running" || q.status === "queued")) ensurePolling();
 
 /* results */
-const PRI_ORDER = { CRITICAL: 0, HIGH: 1, MEDIUM: 2, LOW: 3 };
-const OVERALL = { ready: "Ready for package", curative_needed: "Curative needed", escalate: "Escalate" };
 const CATS = ["Ownership/Vesting","Mortgage/DOT","Judgment","Federal Tax Lien","State Tax Lien","Mechanics' Lien","Probate/Estate","Bankruptcy","Entity/LLC","Trust","HOA/Condo","Municipal/Utility","Easement/Restriction","Survey/Boundary","Foreclosure/Tax Sale","Recording Defect","Legal Description","Search Quality","Commitment Error","Other"];
 let currentFiles = [], currentFileCount = 0;
 const shortName = (n) => String(n).replace(/\.pdf$/i, "").slice(0, 28);
