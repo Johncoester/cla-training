@@ -1,7 +1,7 @@
 /* deed-page.js : the Deed Prep screen (John, Nov 19 2026). Wires js/data/deed-md.js (CLA's deed wording + checklist) and
  * js/data/deed-docx.js (Word file) to the deed-prep service. Open as deed.html?id=<deed id>, or deed.html?review=<review id>
  * to start a deed from a finished title review. In the portal, the same two data modules take a file's facts instead. */
-import { buildDeed, checkDeed, deedText, DEED_SETTINGS, DEED_TYPES } from '../data/deed-md.js?v=202611200030';
+import { buildDeed, checkDeed, deedText, DEED_SETTINGS, DEED_TYPES } from '../data/deed-md.js?v=202611200140';
 import { deedToDocx } from '../data/deed-docx.js?v=202611192300';
 
 const CFG = { url: 'https://upkrpewcsvfltqwmxmjs.supabase.co', key: 'sb_publishable_L1f8ADmFXkPqsSGvLMibDA_6uah2q6v' };
@@ -58,15 +58,21 @@ function render() {
 // The few facts a processor most often needs to change (tenancy, marriage, order of names, price). Everything else comes from the record.
 function renderFacts() {
   const f = facts;
+  const MS = { '': '(not known)', married: 'Married', unmarried: 'Unmarried', divorced: 'Divorced', widowed: 'Widowed' };
+  const gr = (f.grantors || []).map((g, i) => g.kind !== 'individual' ? '' : `<div class="row"><label>Seller ${i + 1}<input value="${esc(g.name)}" disabled></label>
+    <label>Marital status<select data-s="${i}">${Object.entries(MS).map(([k, v]) => `<option value="${k}"${(g.maritalStatus || '') === k ? ' selected' : ''}>${v}</option>`).join('')}</select></label></div>`).join('');
   const ge = (f.grantees || []).map((g, i) => `<div class="row"><label>Grantee ${i + 1}<input data-g="${i}" data-k="name" value="${esc(g.name)}"></label>
     <label>Is<select data-g="${i}" data-k="gender"><option value="">(not needed)</option><option value="F"${g.gender === 'F' ? ' selected' : ''}>a woman</option><option value="M"${g.gender === 'M' ? ' selected' : ''}>a man</option></select></label></div>`).join('');
   $('#facts').innerHTML = `
     <div class="row"><label>Deed type<select id="fType">${Object.entries(DEED_TYPES).map(([k, v]) => `<option value="${k}"${(f.deedType || 'sale') === k ? ' selected' : ''}>${esc(v.label)}</option>`).join('')}</select></label>
     <label>Sale price<input id="fPrice" inputmode="decimal" value="${esc(f.consideration)}"></label></div>
+    ${gr}
+    ${(f.grantors || []).filter((g) => g.kind === 'individual').length === 2 ? `<div class="row"><label class="check"><input type="checkbox" id="fGMar"${f.grantorsMarried ? ' checked' : ''}> The two sellers are married to each other</label></div>` : ''}
     ${ge}
     <div class="row"><label>Buyers take title as<select id="fTen">${Object.entries({ sole: 'Sole owner', tbe: 'Tenants by the entirety', jt: 'Joint tenants', tic: 'Tenants in common', entity: 'Company (LLC / corporation)' }).map(([k, v]) => `<option value="${k}"${f.tenancy === k ? ' selected' : ''}>${v}</option>`).join('')}</select></label>
     <label class="check"><input type="checkbox" id="fMar"${f.granteesMarried ? ' checked' : ''}> The two buyers are married to each other</label>
     <label class="check"><input type="checkbox" id="fConf"${f.tenancySource === 'stated' ? ' checked' : ''}> Buyers confirmed how they take title</label></div>
+    <div class="row"><label>Reviewing attorney (goes on the preparation certificate)<input id="fAtty" value="${esc(f.attorney || '')}" placeholder="Name, Esq."></label></div>
     <p class="note">Change these only after checking with the buyers or the contract. Names, legal description and the vesting deed come from the record and are not edited here.</p>
     <button class="btn ghost" type="button" id="saveFacts">Save changes and redraw</button> <span class="note" id="saveNote"></span>`;
   $('#saveFacts').onclick = async () => {
@@ -75,6 +81,9 @@ function renderFacts() {
     const price = Number(String($('#fPrice').value).replace(/[$,\s]/g, ''));
     if (!(price >= 0) || Number.isNaN(price)) { $('#saveNote').textContent = 'Type the price as a number, like 549000.'; return; }
     edits.consideration = price; edits.tenancy = $('#fTen').value; edits.granteesMarried = $('#fMar').checked; edits.tenancySource = $('#fConf').checked ? 'stated' : 'assumed';
+    edits.grantors = (facts.grantors || []).map((g, i) => { const el = $(`[data-s="${i}"]`); return el ? { ...g, maritalStatus: el.value } : g; });
+    edits.grantorsMarried = !!($('#fGMar') && $('#fGMar').checked);
+    edits.attorney = $('#fAtty').value.trim();
     edits.grantees = (facts.grantees || []).map((g, i) => ({ ...g, name: $(`[data-g="${i}"][data-k="name"]`).value.trim() || g.name, gender: $(`[data-g="${i}"][data-k="gender"]`).value, genderBasis: $(`[data-g="${i}"][data-k="gender"]`).value ? 'stated' : '' }));
     try { await api('save_edits', { id: deed.id, edits }); deed.edits = edits; facts = { ...deed.facts, ...edits }; $('#saveNote').textContent = 'Saved.'; renderChecklist(); renderDeed(); }
     catch (e) { $('#saveNote').textContent = e.message + ' Your changes are still on the screen.'; }
@@ -119,7 +128,7 @@ $('#dl').onclick = async () => {
   } catch (e) { alert("The Word file couldn't be made: " + e.message + ' Refresh the page and try again.'); }
 };
 $('#approve').onclick = async () => {
-  const name = prompt(`Approving attorney's name (default: ${DEED_SETTINGS.attorney})`, DEED_SETTINGS.attorney);
+  const name = prompt("Approving attorney's name", facts.attorney || DEED_SETTINGS.attorney || '');
   if (!name || !name.trim()) return;
   try { await api('approve', { id: deed.id, approved_by: name.trim() }); deed.approved_by = name.trim(); deed.approved_at = new Date().toISOString(); render(); }
   catch (e) { alert(e.message); }

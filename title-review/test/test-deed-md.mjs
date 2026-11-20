@@ -52,7 +52,7 @@ ok(c.some((x) => x.status === 'flag' && /Mary Msola is an owner on title but is 
 const c2 = checkDeed({ ...tbe, contractSellers: ['Simshindo J. Msola'] });
 ok(c2.some((x) => /Name differs/.test(x.text)), 'flags a name written differently');
 const c3 = checkDeed(tbe);
-ok(!c3.some((x) => x.status === 'flag' && x.step === '2. Parties' && /seller/.test(x.text)), 'no seller flag when contract and title match');
+ok(!c3.some((x) => x.status === 'flag' && /owner on title but|signed the contract as a seller|Name differs/.test(x.text)), 'no seller flag when contract and title match');
 const c4 = checkDeed(pr);
 ok(c4.some((x) => x.status === 'ok' && /personal representative signs/.test(x.text)), 'estate: personal representative recognized');
 import { splitNames, compareNames } from '../js/data/deed-md.js';
@@ -72,4 +72,9 @@ ok(checkDeed({ ...tbe, taxId: '06-000-06914600' }).some((x) => x.status === 'ok'
 const tg = norm(deedText(buildDeed({ ...tbe, tenancy: 'entity', grantees: [{ name: 'DOOLITTLE SCALISE FAMILY TRUST', kind: 'entity', entityDesc: 'a trust (trustees to be named; see flags)' }] })));
 ok(!/see flags|to be named/.test(tg), 'AI notes never printed in the deed');
 ok(checkDeed({ ...tbe, tenancy: 'entity', grantees: [{ name: 'DOOLITTLE SCALISE FAMILY TRUST', kind: 'entity' }] }).some((x) => /takes title through its trustees/.test(x.text)), 'trust as grantee needs trustees');
+const dv = norm(deedText(buildDeed({ ...tbe, grantors: [{ name: 'Novia Sunday Maduro', kind: 'individual', maritalStatus: 'divorced', gender: 'F' }, { name: 'Jeffrey Bayne Weidenhaft', kind: 'individual', maritalStatus: 'divorced', gender: 'M' }] })));
+ok(dv.includes('by and between Novia Sunday Maduro, divorced and Jeffrey Bayne Weidenhaft, divorced, parties of the first part'), "sellers' marital status in the first paragraph");
+const hw = norm(deedText(buildDeed({ ...tbe, grantorsMarried: true, grantors: [{ name: 'John Doe', kind: 'individual', gender: 'M' }, { name: 'Jane Doe', kind: 'individual', gender: 'F' }] })));
+ok(hw.includes('by and between John Doe and Jane Doe, husband and wife, parties of the first part'), 'married sellers: husband and wife in name order');
+ok(checkDeed(tbe).some((x) => /Marital status of seller Simshindo Msola is not known/.test(x.text)), 'flags a seller with unknown marital status');
 console.log(fail ? `\n${fail} failed` : '\nall passed'); process.exit(fail ? 1 : 0);

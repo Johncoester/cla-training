@@ -151,7 +151,7 @@ Follow CLA's Deed Preparation Checklist (Cris Bolea, Nov 2026) and CLA's deed no
 - The grantors are the CURRENT OWNERS OF RECORD from the current vesting deed in the search, exactly as named there. Sellers on the contract must match them; report every difference.
 - The grantees are the BUYERS on the contract (after any assignment or addendum), full legal names as written on the contract.
 - Copy the legal description WORD FOR WORD from the vesting deed (or the commitment's legal description if the vesting deed copy is not in the package). Never shorten, fix or paraphrase it. Keep its paragraph breaks.
-- Marital status and tenancy go in the first paragraph. If two grantees are married and the first named is a woman, it is "wife and husband".
+- Marital status of the SELLERS and of the BUYERS, and the buyers' tenancy, go in the first paragraph (grantorsMarried = the two sellers are married to each other). If two grantees are married and the first named is a woman, it is "wife and husband".
 - A deceased owner needs a personal representative (estate) or survivorship; cite the estate number when given.
 - Recorded matters that CLA carries onto the deed (front foot benefit / deferred water and sewer liens, MPDU covenants, condominium common elements, ground rent / leasehold) go in extraClauses, copied word for word from the vesting deed.
 - Never include SSNs, account numbers or dates of birth.
@@ -169,6 +169,7 @@ function factsPrompt(d: any, corrections: any[]) {
 "ownersOfRecord":["each current owner, exactly as on the vesting deed"],
 "deaths":[{"name":"","diedOn":"","leaving":"who title passed to / personal representative and estate no.","survivorshipCovers":false}],
 "grantors":[{"name":"","kind":"individual|personal_representative|entity|trustee","maritalStatus":"married|unmarried|divorced|widowed|","gender":"F|M|","genderBasis":"stated|name|","estateOf":"","decedentDiedOn":"","entityDesc":"e.g. a Maryland limited liability company","signer":"","signerTitle":"","trustName":"","poa":false}],
+"grantorsMarried":false,
 "contractSellers":["one entry per seller, as written on the contract"],"contractBuyers":["one entry per buyer, as written on the contract"],
 "grantees":[{"name":"","kind":"individual|entity","gender":"F|M|","genderBasis":"stated|name|","entityDesc":""}],
 "tenancy":"sole|tbe|jt|tic|entity","tenancySource":"stated|assumed","tenancyEvidence":"quote the contract wording that states it, if any","granteesMarried":false,

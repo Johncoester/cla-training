@@ -9,7 +9,7 @@
  * Every draft needs attorney review (the certification names the attorney in DEED_SETTINGS). */
 
 export const DEED_SETTINGS = {
-  attorney: 'Joel L. Steinberg, Esq.',      // signs the preparation certificate on every CLA sample deed
+  attorney: '',      // John, Nov 19 2026: not Joel Steinberg for every deed. Blank line until the approving attorney is named on the deed page.
   returnTo: ['CLA TITLE & ESCROW', '9210 Corporate Boulevard, Suite 150', 'Rockville, MD 20850'],
   underwriter: 'Fidelity National Title Insurance Company',
 };
@@ -24,6 +24,8 @@ export const DEED_TYPES = {
   ground_rent_redemption: { label: 'Deed in redemption of ground rent', auto: false, sample: 'DEED SAMPLE - GROUND RENT REDEMPTION' },
   into_llc: { label: 'Deed into an LLC (no consideration)', auto: false, sample: 'DEED-MD-7752 - Deed Into LLC' },
 };
+
+export const MARITAL = { married: 'married', unmarried: 'unmarried', divorced: 'divorced', widowed: 'widowed' };
 
 export const TENANCIES = {
   sole: 'Sole Owner',
@@ -69,7 +71,13 @@ const desc = (d) => { const t = clean(d); return /^(a|an)\s/i.test(t) && !/[()]|
 function grantorClause(f) {
   const g = f.grantors || [];
   const prs = g.filter((x) => x.kind === 'personal_representative');
-  const others = g.filter((x) => x.kind !== 'personal_representative').map((x) =>
+  // sellers' marital status goes in the first paragraph too (John, Nov 19 2026)
+  const ind = g.filter((x) => x.kind === 'individual');
+  if (f.grantorsMarried && ind.length === 2 && ind.length === g.length) {
+    const [a, b] = ind.map((x) => x.gender);
+    return `${listAnd(ind.map((x) => clean(x.name)))}, ${a === 'F' && b === 'M' ? 'wife and husband' : a === 'M' && b === 'F' ? 'husband and wife' : 'spouses'}`;
+  }
+  const others = g.filter((x) => x.kind !== 'personal_representative').map((x) => x.kind === 'individual' && MARITAL[x.maritalStatus] ? `${clean(x.name)}, ${MARITAL[x.maritalStatus]}` :
     x.kind === 'entity' ? `${clean(x.name)}${desc(x.entityDesc) ? ', ' + desc(x.entityDesc) : ''}`
       : x.kind === 'trustee' ? (/trustee/i.test(x.name) ? clean(x.name) : `${clean(x.name)}${x.trustName ? `, Trustee of the ${clean(x.trustName)}` : ', Trustee'}`)
         : clean(x.name));
@@ -163,7 +171,7 @@ export function buildDeed(facts) {
   B.push({ kind: 'p', text: `As Witness the hand and seal of said Grantor${many ? 's' : ''}, the day and year first above written.` });
   B.push({ kind: 'signature', blocks: signatureBlocks(f) });
   for (const who of notaryGroups(f)) B.push({ kind: 'notary', text: `I hereby certify that on the _____ day of __________, ${year}, before me, the subscriber, a Notary Public of the State of Maryland, in and for the County aforesaid, personally appeared ${who}, known to me or satisfactorily proven to be the person whose name is subscribed to the within instrument and made oath in due form of law that the matters and facts set forth herein are true.` });
-  B.push({ kind: 'cert', text: 'THIS IS TO CERTIFY that the within Deed was prepared by, or under the supervision of the undersigned, an Attorney duly admitted to practice before the Court of Appeals of Maryland.', signer: DEED_SETTINGS.attorney });
+  B.push({ kind: 'cert', text: 'THIS IS TO CERTIFY that the within Deed was prepared by, or under the supervision of the undersigned, an Attorney duly admitted to practice before the Court of Appeals of Maryland.', signer: clean(f.attorney) || DEED_SETTINGS.attorney || '____________________, Esq.' });
   B.push({ kind: 'pagebreak' });
   B.push({ kind: 'title', text: 'EXHIBIT A' });
   B.push({ kind: 'p', text: `ALL that certain lot, parcel or tract of land, situate and lying in ${situate(f).replace(/^the /, 'the ')}, and being more particularly described as follows:` });
@@ -302,6 +310,9 @@ export function checkDeed(facts) {
     const onTitle = owners.some((o) => sameName(o, x.name)) || x.kind === 'personal_representative';
     if (owners.length && !onTitle) add('7. Quality control', 'flag', `Grantor "${x.name}" is not an owner of record. The grantor names must match the current recorded deed.`);
   }
+  const indG = (f.grantors || []).filter((x) => x.kind === 'individual');
+  if (indG.length && !(f.grantorsMarried && indG.length === 2)) for (const x of indG) if (!MARITAL[x.maritalStatus]) add('2. Parties', 'flag', `Marital status of seller ${clean(x.name)} is not known. It goes in the first paragraph of the deed: confirm married, unmarried, divorced or widowed (and get the spouse's joinder if a married seller's spouse is not on title).`);
+  if (indG.length && (f.grantorsMarried && indG.length === 2 || indG.every((x) => MARITAL[x.maritalStatus]))) add('6. Drafting', 'ok', "Sellers' marital status is in the first paragraph.");
   // grantees vs contract buyers
   const buyers = splitNames(f.contractBuyers);
   if (buyers.length) {
@@ -346,6 +357,6 @@ export function checkDeed(facts) {
   add('5. Taxes', 'todo', 'Form WH-AR (seller residency / principal residence), or withholding if the seller is not a Maryland resident.');
   if (f.principalResidence) add('5. Taxes', 'todo', 'Owner Occupancy Affidavit signed by the buyers.');
   if (f.firstTimeBuyer) add('5. Taxes', 'todo', 'Affidavit of Grantee as First-Time Maryland Home Buyer (state transfer tax exemption).');
-  add('8. Legal review', 'todo', `Attorney review and approval: ${DEED_SETTINGS.attorney}.`);
+  add('8. Legal review', clean(f.attorney) || DEED_SETTINGS.attorney ? 'todo' : 'flag', clean(f.attorney) || DEED_SETTINGS.attorney ? `Attorney review and approval: ${clean(f.attorney) || DEED_SETTINGS.attorney}.` : 'No attorney named yet. Type the reviewing attorney under Key facts; the name goes on the preparation certificate.');
   return out;
 }
