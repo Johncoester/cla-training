@@ -312,8 +312,8 @@ export function checkDeed(facts) {
     if (owners.length && !onTitle) add('7. Quality control', 'flag', `Grantor "${x.name}" is not an owner of record. The grantor names must match the current recorded deed.`);
   }
   const indG = (f.grantors || []).filter((x) => x.kind === 'individual');
-  if (indG.length && !(f.grantorsMarried && indG.length === 2)) for (const x of indG) if (!MARITAL[x.maritalStatus]) add('2. Parties', 'flag', `Marital status of seller ${clean(x.name)} is not known. It goes in the first paragraph of the deed: confirm married, unmarried, divorced or widowed (and get the spouse's joinder if a married seller's spouse is not on title).`);
-  if (indG.length && (f.grantorsMarried && indG.length === 2 || indG.every((x) => MARITAL[x.maritalStatus]))) add('6. Drafting', 'ok', "Sellers' marital status is in the first paragraph.");
+  // John, Nov 20 2026: in Maryland marriage isn't needed on the deed (no spouse joinder), so an unknown marital status is not flagged.
+  if (indG.length && indG.some((x) => MARITAL[x.maritalStatus])) add('6. Drafting', 'ok', "Sellers' marital status, where known, is in the first paragraph.");
   // grantees vs contract buyers
   const buyers = splitNames(f.contractBuyers);
   if (buyers.length) {

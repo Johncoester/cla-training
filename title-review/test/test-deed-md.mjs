@@ -76,5 +76,5 @@ const dv = norm(deedText(buildDeed({ ...tbe, grantors: [{ name: 'Novia Sunday Ma
 ok(dv.includes('by and between Novia Sunday Maduro, divorced, and Jeffrey Bayne Weidenhaft, divorced, parties of the first part'), "sellers' marital status in the first paragraph");
 const hw = norm(deedText(buildDeed({ ...tbe, grantorsMarried: true, grantors: [{ name: 'John Doe', kind: 'individual', gender: 'M' }, { name: 'Jane Doe', kind: 'individual', gender: 'F' }] })));
 ok(hw.includes('by and between John Doe and Jane Doe, husband and wife, parties of the first part'), 'married sellers: husband and wife in name order');
-ok(checkDeed(tbe).some((x) => /Marital status of seller Simshindo Msola is not known/.test(x.text)), 'flags a seller with unknown marital status');
+ok(!checkDeed(tbe).some((x) => /Marital status of seller/.test(x.text)), 'MD: no flag when a seller\'s marital status is unknown (marriage not needed)');
 console.log(fail ? `\n${fail} failed` : '\nall passed'); process.exit(fail ? 1 : 0);
