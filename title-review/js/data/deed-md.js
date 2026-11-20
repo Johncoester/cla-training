@@ -86,7 +86,8 @@ function grantorClause(f) {
     const est = prs[0];
     parts.unshift(`${listAnd(prs.map((x) => clean(x.name)))}, Personal Representative${prs.length > 1 ? 's' : ''} of Estate of ${clean(est.estateOf)}${est.decedentDiedOn ? `, who passed on ${longDate(est.decedentDiedOn)}` : ''}`);
   }
-  return listAnd(parts);
+  // parts that carry their own commas ("Jane Doe, divorced") are joined with ", and" so the status stays with its name
+  return parts.some((x) => x.includes(',')) && parts.length === 2 ? `${parts[0]}, and ${parts[1]}` : listAnd(parts);
 }
 // "husband and wife" / "wife and husband": the order follows the names (IMPORTANT NOTES 2: a female first grantee is WIFE AND HUSBAND)
 export function maritalPhrase(f) {

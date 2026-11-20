@@ -1,7 +1,7 @@
 /* deed-page.js : the Deed Prep screen (John, Nov 19 2026). Wires js/data/deed-md.js (CLA's deed wording + checklist) and
  * js/data/deed-docx.js (Word file) to the deed-prep service. Open as deed.html?id=<deed id>, or deed.html?review=<review id>
  * to start a deed from a finished title review. In the portal, the same two data modules take a file's facts instead. */
-import { buildDeed, checkDeed, deedText, DEED_SETTINGS, DEED_TYPES } from '../data/deed-md.js?v=202611200140';
+import { buildDeed, checkDeed, deedText, DEED_SETTINGS, DEED_TYPES } from '../data/deed-md.js?v=202611200150';
 import { deedToDocx } from '../data/deed-docx.js?v=202611192300';
 
 const CFG = { url: 'https://upkrpewcsvfltqwmxmjs.supabase.co', key: 'sb_publishable_L1f8ADmFXkPqsSGvLMibDA_6uah2q6v' };

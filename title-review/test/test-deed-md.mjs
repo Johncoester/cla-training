@@ -73,7 +73,7 @@ const tg = norm(deedText(buildDeed({ ...tbe, tenancy: 'entity', grantees: [{ nam
 ok(!/see flags|to be named/.test(tg), 'AI notes never printed in the deed');
 ok(checkDeed({ ...tbe, tenancy: 'entity', grantees: [{ name: 'DOOLITTLE SCALISE FAMILY TRUST', kind: 'entity' }] }).some((x) => /takes title through its trustees/.test(x.text)), 'trust as grantee needs trustees');
 const dv = norm(deedText(buildDeed({ ...tbe, grantors: [{ name: 'Novia Sunday Maduro', kind: 'individual', maritalStatus: 'divorced', gender: 'F' }, { name: 'Jeffrey Bayne Weidenhaft', kind: 'individual', maritalStatus: 'divorced', gender: 'M' }] })));
-ok(dv.includes('by and between Novia Sunday Maduro, divorced and Jeffrey Bayne Weidenhaft, divorced, parties of the first part'), "sellers' marital status in the first paragraph");
+ok(dv.includes('by and between Novia Sunday Maduro, divorced, and Jeffrey Bayne Weidenhaft, divorced, parties of the first part'), "sellers' marital status in the first paragraph");
 const hw = norm(deedText(buildDeed({ ...tbe, grantorsMarried: true, grantors: [{ name: 'John Doe', kind: 'individual', gender: 'M' }, { name: 'Jane Doe', kind: 'individual', gender: 'F' }] })));
 ok(hw.includes('by and between John Doe and Jane Doe, husband and wife, parties of the first part'), 'married sellers: husband and wife in name order');
 ok(checkDeed(tbe).some((x) => /Marital status of seller Simshindo Msola is not known/.test(x.text)), 'flags a seller with unknown marital status');
