@@ -319,6 +319,10 @@ function parseJson(text: string) {
   if (fence) { try { return JSON.parse(fence[1]); } catch { /* */ } }
   const a = text.indexOf("{"), b = text.lastIndexOf("}");
   if (a >= 0 && b > a) { try { return JSON.parse(text.slice(a, b + 1)); } catch { /* */ } }
+  // Claude sometimes writes a broken copy, says so, then a corrected copy: try each JSON start on a new line, latest first.
+  const starts: number[] = []; let i = -1;
+  while ((i = text.indexOf('{"', i + 1)) >= 0) if (i === 0 || /\n\s*$/.test(text.slice(Math.max(0, i - 4), i))) starts.push(i);
+  for (const s of starts.reverse()) { try { return JSON.parse(text.slice(s, b + 1)); } catch { /* */ } }
   return null;
 }
 

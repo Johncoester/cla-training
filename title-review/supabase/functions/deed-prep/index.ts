@@ -204,6 +204,10 @@ function parseJson(t: string) {
   try { return JSON.parse(t); } catch { /* */ }
   const m = t.match(/```(?:json)?\s*([\s\S]*?)```/); if (m) { try { return JSON.parse(m[1]); } catch { /* */ } }
   const a = t.indexOf("{"), b = t.lastIndexOf("}"); if (a >= 0 && b > a) { try { return JSON.parse(t.slice(a, b + 1)); } catch { /* */ } }
+  // a broken copy followed by a corrected one: try each JSON start on a new line, latest first
+  const starts: number[] = []; let i = -1;
+  while ((i = t.indexOf('{"', i + 1)) >= 0) if (i === 0 || /\n\s*$/.test(t.slice(Math.max(0, i - 4), i))) starts.push(i);
+  for (const s of starts.reverse()) { try { return JSON.parse(t.slice(s, b + 1)); } catch { /* */ } }
   return null;
 }
 function friendly(status: number, out: any) {
