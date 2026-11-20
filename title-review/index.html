@@ -264,8 +264,8 @@ ol.qs { margin: 0; padding-left: 20px; display: grid; gap: 6px; font-size: 14px;
       <div class="section-title"><h2>Past reviews</h2><span class="note" id="histNote"></span></div>
       <div class="tablewrap" style="margin-top:12px">
         <table>
-          <thead><tr><th>Date</th><th>File</th><th>Type</th><th>By</th><th>Result</th><th>Findings</th><th>Team missed</th><th>Feedback</th><th>Cost</th></tr></thead>
-          <tbody id="histBody"><tr><td colspan="9" class="note">Loading…</td></tr></tbody>
+          <thead><tr><th>Date</th><th>File</th><th>Type</th><th>By</th><th>Result</th><th>Findings</th><th>Team missed</th><th>Feedback</th><th>Cost</th><th>Deed</th></tr></thead>
+          <tbody id="histBody"><tr><td colspan="10" class="note">Loading…</td></tr></tbody>
         </table>
       </div>
     </div>
@@ -674,17 +674,18 @@ async function loadHistory() {
   const body = $("#histBody");
   try {
     const { reviews } = await api("list");
-    if (!reviews.length) { body.innerHTML = `<tr><td colspan="9" class="note">No reviews yet. Run the first one from New review.</td></tr>`; return; }
+    if (!reviews.length) { body.innerHTML = `<tr><td colspan="10" class="note">No reviews yet. Run the first one from New review.</td></tr>`; return; }
     body.innerHTML = reviews.map(x => `<tr class="hist-row" data-id="${esc(x.id)}" tabindex="0">
       <td>${esc(String(x.created_at).slice(0, 10))}</td><td class="mono">${esc(x.file_no || "-")}</td><td>${esc(x.state)} ${esc(x.tx_type)}</td><td>${esc(x.reviewer_name)}</td>
       <td>${x.status === "done" ? esc(OVERALL[x.overall] || "") : esc(x.status)}</td><td>${esc(x.findings)}</td><td>${esc(x.missed)}</td><td>${esc(x.feedback)}</td>
-      <td>${x.cost != null ? "$" + Number(x.cost).toFixed(2) : ""}</td></tr>`).join("");
+      <td>${x.cost != null ? "$" + Number(x.cost).toFixed(2) : ""}</td>
+      <td>${x.deed_id ? (x.deed_status === "done" ? `<a class="btn" href="deed.html?id=${esc(x.deed_id)}">Open deed</a>` : `<a href="deed.html?id=${esc(x.deed_id)}">${x.deed_status === "error" ? "Deed failed: open to retry" : "Deed in progress"}</a>`) : ""}</td></tr>`).join("");
     body.querySelectorAll(".hist-row").forEach(tr => {
       const open = () => openReview(tr.dataset.id);
-      tr.addEventListener("click", open);
+      tr.addEventListener("click", (e) => { if (e.target.closest("a")) return; open(); });
       tr.addEventListener("keydown", (e) => { if (e.key === "Enter") open(); });
     });
-  } catch (e) { body.innerHTML = `<tr><td colspan="9" class="note">${esc(e.message)}</td></tr>`; }
+  } catch (e) { body.innerHTML = `<tr><td colspan="10" class="note">${esc(e.message)}</td></tr>`; }
 }
 async function openReview(id) {
   try {

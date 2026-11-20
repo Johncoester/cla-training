@@ -125,7 +125,10 @@ async function listReviews() {
            jsonb_array_length(coalesce(r.result->'findings','[]'::jsonb)) as findings,
            (select count(*) from jsonb_array_elements(coalesce(r.result->'findings','[]'::jsonb)) f where (f->>'team_missed')::boolean) as missed,
            (select count(*) from title_review.feedback f where f.review_id = r.id) as feedback,
-           (r.usage->>'est_cost_usd')::numeric as cost
+           (r.usage->>'est_cost_usd')::numeric as cost,
+           -- the latest deed prepared from this review, so Past reviews can link to it (John, Nov 20 2026)
+           (select d.id from title_review.deeds d where d.review_id = r.id order by (d.status = 'done') desc, d.created_at desc limit 1) as deed_id,
+           (select d.status from title_review.deeds d where d.review_id = r.id order by (d.status = 'done') desc, d.created_at desc limit 1) as deed_status
     from title_review.reviews r order by r.created_at desc limit 60`;
   return { reviews: rows };
 }
