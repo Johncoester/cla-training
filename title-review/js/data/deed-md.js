@@ -68,6 +68,22 @@ export function amountWords(amount) {
 const desc = (d) => { const t = clean(d); return /^(a|an)\s/i.test(t) && !/[()]|see |to be |flag|confirm|unknown/i.test(t) ? t : ''; };
 // facts.grantors: [{ name, kind: 'individual'|'personal_representative'|'entity'|'trustee', estateOf, decedentDiedOn, entityDesc, signer, signerTitle }]
 // facts.grantees: [{ name, kind: 'individual'|'entity', entityDesc, gender: 'F'|'M'|'' }], facts.tenancy, facts.granteesMarried
+/* Trusts and companies (Caroline and Eve, Nov 20: "it doesn't pick up entities very well").
+ * A trustee's trust name as the record writes it ("Trustee named as Trustee in the Last Will and Testament of Robert L. Kokta") would read
+ * "Trustee of the Trustee named as ..."; a will trust reads "Trustee under the Last Will and Testament of Robert L. Kokta". */
+export function trustWords(trustName) {
+  let t = clean(trustName).replace(/^(the\s+)?(successor\s+)?(co-?)?trustees?\s+(named\s+(as\s+(successor\s+)?trustees?\s+)?)?(in|under|of)\s+(the\s+)?/i, '').replace(/^the\s+/i, '');
+  if (!t) return { phrase: 'Trustee', heading: '' };
+  if (/last will and testament/i.test(t)) { t = t.replace(/^.*?(last will and testament)/i, 'Last Will and Testament'); return { phrase: `Trustee under the ${t}`, heading: `Trust under the ${t}` }; }
+  return { phrase: `Trustee of the ${t}`, heading: t };
+}
+// "DOOLITTLE SCALISE FAMILY TRUST" reads "Doolittle Scalise Family Trust" on the deed; LLC, INC and the like stay in capitals
+export const smartCase = (n) => { const c = clean(n); return c && c === c.toUpperCase() && /[A-Z]{3}/.test(c)
+  ? c.toLowerCase().replace(/\b([a-z])/g, (m) => m.toUpperCase()).replace(/\b(Llc|Inc|Lp|Llp|Pc|Ii|Iii|Iv)\b/g, (m) => m.toUpperCase()).replace(/\bMc([a-z])/g, (m, x) => 'Mc' + x.toUpperCase()) : c; };
+// a trust buying in its own name: a trust takes title through its trustees, so the deed shows blanks for them and the trust date
+export const trustBuyer = (x) => /\btrust\b/i.test(String(x && x.name)) && !/\btrustees?\b/i.test(String(x && x.name));
+const granteeName = (x) => trustBuyer(x) ? `____________________, Trustee(s) of the ${smartCase(x.name).replace(/^the\s+/i, '')} dated ____________` : smartCase(x.name);
+
 function grantorClause(f) {
   const g = f.grantors || [];
   const prs = g.filter((x) => x.kind === 'personal_representative');
@@ -79,7 +95,7 @@ function grantorClause(f) {
   }
   const others = g.filter((x) => x.kind !== 'personal_representative').map((x) => x.kind === 'individual' && MARITAL[x.maritalStatus] ? `${clean(x.name)}, ${MARITAL[x.maritalStatus]}` :
     x.kind === 'entity' ? `${clean(x.name)}${desc(x.entityDesc) ? ', ' + desc(x.entityDesc) : ''}`
-      : x.kind === 'trustee' ? (/trustee/i.test(x.name) ? clean(x.name) : `${clean(x.name)}${x.trustName ? `, Trustee of the ${clean(x.trustName)}` : ', Trustee'}`)
+      : x.kind === 'trustee' ? (/trustee/i.test(x.name) ? clean(x.name) : `${clean(x.name)}, ${trustWords(x.trustName).phrase}`)
         : clean(x.name));
   const parts = [...others];
   if (prs.length) {
@@ -103,17 +119,18 @@ function tenancyPhrase(f) {
   if (f.tenancy === 'entity') return '';
   return `as ${TENANCIES[f.tenancy] || 'tenants in common'}`;
 }
-function granteeNames(f) { return listAnd((f.grantees || []).map((x) => clean(x.name))); }
+function granteeNames(f) { return listAnd((f.grantees || []).map(granteeName)); }
 // first paragraph: names, marital status and tenancy (IMPORTANT NOTES 1)
 function granteeClause(f) {
   const e = f.grantees || [];
-  if (f.tenancy === 'entity') return listAnd(e.map((x) => `${clean(x.name)}${desc(x.entityDesc) ? ', ' + desc(x.entityDesc) : ''}`));
+  if (f.tenancy === 'entity') return listAnd(e.map((x) => `${granteeName(x)}${desc(x.entityDesc) ? ', ' + desc(x.entityDesc) : ''}`));
   if (f.tenancy === 'sole') return `${granteeNames(f)}, Sole Owner`;
   return [granteeNames(f), maritalPhrase(f), tenancyPhrase(f)].filter(Boolean).join(', ');
 }
 const plural = (xs) => (xs || []).length > 1;
 function granteePronouns(f) {
   const e = f.grantees || [];
+  if (e.length === 1 && trustBuyer(e[0])) return { poss: 'their', obj: 'them', trust: true };   // the trustees, as trustees
   if (f.tenancy === 'entity' || (e.length === 1 && e[0].kind === 'entity')) return { poss: 'its', obj: 'it' };
   if (e.length > 1) return { poss: 'their', obj: 'them' };
   return e[0] && e[0].gender === 'F' ? { poss: 'her', obj: 'her' } : e[0] && e[0].gender === 'M' ? { poss: 'his', obj: 'him' } : { poss: 'their', obj: 'them' };
@@ -121,6 +138,7 @@ function granteePronouns(f) {
 // who the grant runs to: CLA's survivorship wording for sole owner / TBE / JT; tenants in common and entities take no survivorship
 function grantRunsTo(f) {
   const p = granteePronouns(f);
+  if (p.trust) return 'their successors in trust and assigns, in fee simple';
   if (f.tenancy === 'entity') return `${p.poss} successors and assigns, in fee simple`;
   if (f.tenancy === 'tic') return `${p.poss} heirs, personal representatives and assigns, in fee simple`;
   return `${p.poss} assigns, the survivor of ${p.obj} and the survivor's heirs, personal representatives and assigns, in fee simple`;
@@ -192,7 +210,7 @@ function signatureBlocks(f) {
   if (prs.length) out.push({ heading: `Estate of ${clean(prs[0].estateOf)}`, signers: prs.map((x) => `${clean(x.name)}, Personal Representative`), by: true });
   for (const x of g.filter((y) => y.kind !== 'personal_representative')) {
     if (x.kind === 'entity') out.push({ heading: clean(x.name), signers: [`${clean(x.signer) || '____________________'}, ${clean(x.signerTitle) || 'Authorized Signatory'}`], by: true });
-    else if (x.kind === 'trustee') out.push({ heading: x.trustName ? clean(x.trustName) : '', signers: [`${clean(x.signer || String(x.name).split(',')[0])}, Trustee`], by: !!x.trustName });
+    else if (x.kind === 'trustee') { const w = trustWords(x.trustName); out.push({ heading: w.heading, signers: [`${clean(x.signer || String(x.name).split(',')[0])}, Trustee`], by: !!w.heading }); }
     else out.push({ heading: '', signers: [clean(x.name)], by: false });
   }
   return out;
@@ -203,7 +221,7 @@ function notaryGroups(f) {
   const out = [];
   if (prs.length) out.push(`${listAnd(prs.map((x) => clean(x.name)))}, Personal Representative${prs.length > 1 ? 's' : ''} of Estate of ${clean(prs[0].estateOf)}`);
   const ind = g.filter((x) => x.kind === 'individual').map((x) => clean(x.name));
-  for (const x of g.filter((y) => y.kind === 'trustee')) out.push(`${clean(x.signer || String(x.name).split(',')[0])}, Trustee${x.trustName ? ' of the ' + clean(x.trustName) : ''}`);
+  for (const x of g.filter((y) => y.kind === 'trustee')) out.push(`${clean(x.signer || String(x.name).split(',')[0])}, ${trustWords(x.trustName).phrase}`);
   if (ind.length) out.push(listAnd(ind));
   for (const x of g.filter((y) => y.kind === 'entity')) out.push(`${clean(x.signer) || '____________________'}, ${clean(x.signerTitle) || 'Authorized Signatory'} of ${clean(x.name)}`);
   return out;
@@ -333,6 +351,11 @@ export function checkDeed(facts) {
     if (!c.missing.length) add('2. Parties', 'ok', `Grantees match the buyers on the contract: ${listAnd(buyers)}.`);
   } else if (isSale) add('2. Parties', 'flag', 'Buyers were not found in the contract.');
 
+  // a company on either side needs what it is and where it was formed, and a company seller needs who signs (Caroline, Nov 20)
+  for (const x of [...(f.grantors || []), ...(f.grantees || [])].filter((y) => y.kind === 'entity' && !trustBuyer(y))) {
+    if (!desc(x.entityDesc)) add('2. Parties', 'flag', `Add what kind of company ${smartCase(x.name)} is and where it was formed (for example "a Maryland limited liability company"), from its Articles or SDAT business record.`);
+  }
+  for (const x of (f.grantors || []).filter((y) => y.kind === 'entity' && !clean(y.signer))) add('2. Parties', 'flag', `Who signs for ${smartCase(x.name)} is not known. Get the operating agreement or a resolution naming the signer and their title.`);
   for (const x of f.grantees || []) if (/\btrust\b/i.test(x.name) && !/trustee/i.test(x.name)) add('2. Parties', 'flag', `"${clean(x.name)}" is a trust. A trust takes title through its trustees: the grantee must read "[names], Trustees of the [trust name] dated [date]". Get the trustees' names and the trust date before the deed goes out.`);
   // tenancy rules + IMPORTANT NOTES
   const n = (f.grantees || []).length;
@@ -408,6 +431,8 @@ export function flagTopic(text, people) {
   if (/exemption|no[- ]consideration|transfer tax|recordation tax/i.test(t)) return 'exemption';
   if (/legal description|exhibit a\b/i.test(t)) return 'legal';
   if (/\btrusts?\b/i.test(t) && /\b(buyers?|grantees?)\b/i.test(t)) return 'trust-buyer';
+  const low0 = t.toLowerCase();   // a company's own details (what it is, where formed, who signs) go with that company, even if "tenancy" is mentioned
+  if (/\bllc\b|\binc\b|corporation|state of formation|limited liability|who signs for/i.test(t)) { const who = people.filter((p) => new RegExp(`\\b${p}\\b`).test(low0)); if (who.length) return { people: who }; }
   if (/\btenan|vesting(?! deed)|takes? title|taking title|sole owner|joint tenants|married to each other|wife and husband|husband and wife|\bgenders?\b|marital status/i.test(t)) return 'vesting';
   const low = t.toLowerCase();   // the people on the file the flag names
   const who = people.filter((p) => new RegExp(`\\b${p}\\b`).test(low));

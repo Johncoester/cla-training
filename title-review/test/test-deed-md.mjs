@@ -119,4 +119,16 @@ const dOnly = flagsOf({ ...tbe, deedType: 'gift', tenancy: 'jt', tenancySource: 
 ok(!dOnly.some((x) => /Confirm marital status of the grantees/.test(x.text)), 'joint tenants stated: no marital question');
 ok(dOnly.filter((x) => /exemption/i.test(x.text) && x.step !== '3. Deed type').length === 1 && dOnly.some((x) => /Parents to their daughter/.test(x.text)), 'the exemption is one item and uses the relationship from the request');
 ok(dOnly.some((x) => x.step === '3. Deed type' && !x.combined), 'the deed type stays its own item');
+
+// ---- trusts and companies (Caroline and Eve, Nov 20) ----
+const willTrust = norm(deedText(buildDeed({ ...tbe, grantorsMarried: false, grantors: [{ name: 'Rose M. Trovato', kind: 'trustee', signer: 'Rose M. Trovato', trustName: 'Trustee named as Trustee in the Last Will and Testament of Robert L. Kokta' }] })));
+ok(willTrust.includes('by and between Rose M. Trovato, Trustee under the Last Will and Testament of Robert L. Kokta, party of the first part') && !/Trustee of the Trustee/.test(willTrust), 'a will trust reads "Trustee under the Last Will and Testament of ..."');
+ok(willTrust.includes('Trust under the Last Will and Testament of Robert L. Kokta By:'), 'its signature block is headed by the will trust');
+const tb = norm(deedText(buildDeed({ ...tbe, tenancy: 'entity', granteesMarried: false, grantees: [{ name: 'DOOLITTLE SCALISE FAMILY TRUST', kind: 'entity' }] })));
+ok(tb.includes('____________________, Trustee(s) of the Doolittle Scalise Family Trust dated ____________, party of the second part') && tb.includes('their successors in trust and assigns, in fee simple'), 'a trust buyer takes through its trustees (blanks to fill) and its successors in trust');
+const llc = flagsOf({ ...tbe, tenancy: 'entity', tenancySource: 'stated', granteesMarried: false, grantees: [{ name: 'HK Equity Group LLC', kind: 'entity' }], contractBuyers: ['HK EQUITY GROUP LLC'],
+  grantors: [{ name: 'Smallwood Holdings LLC', kind: 'entity', entityDesc: 'a Maryland limited liability company' }], ownersOfRecord: ['Smallwood Holdings LLC'], contractSellers: ['Smallwood Holdings LLC'],
+  flags: [{ step: '6. Drafting', text: 'No tenancy or entity details (state of formation) are in the documents. Confirm HK Equity Group LLC is a Maryland LLC.' }] });
+ok(llc.filter((x) => /HK Equity Group LLC/.test(x.text)).length === 1 && llc.some((x) => /what kind of company HK Equity Group LLC is/.test(x.text)), 'a company buyer with no state of formation: one item');
+ok(llc.some((x) => /Who signs for Smallwood Holdings LLC is not known/.test(x.text)), 'a company seller with no signer is flagged');
 console.log(fail ? `\n${fail} failed` : '\nall passed'); process.exit(fail ? 1 : 0);
