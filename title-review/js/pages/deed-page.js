@@ -1,7 +1,7 @@
 /* deed-page.js : the Deed Prep screen (John, Nov 19 2026). Wires js/data/deed-md.js (CLA's deed wording + checklist) and
  * js/data/deed-docx.js (Word file) to the deed-prep service. Open as deed.html?id=<deed id>, or deed.html?review=<review id>
  * to start a deed from a finished title review. In the portal, the same two data modules take a file's facts instead. */
-import { buildDeed, checkDeed, deedText, DEED_SETTINGS, DEED_TYPES } from '../data/deed-md.js?v=202611201200';
+import { buildDeed, checkDeed, deedText, DEED_SETTINGS, DEED_TYPES } from '../data/deed-md.js?v=202611202200';
 import { deedToDocx } from '../data/deed-docx.js?v=202611192300';
 
 const CFG = { url: 'https://upkrpewcsvfltqwmxmjs.supabase.co', key: 'sb_publishable_L1f8ADmFXkPqsSGvLMibDA_6uah2q6v' };
@@ -99,7 +99,10 @@ function renderChecklist() {
     const rows = items.filter((x) => x.step === step);
     if (!rows.length) return '';
     return `<h3>${esc(step)}</h3><ul class="chk">${rows.map((x, i) => {
-      const fid = `${step}#${i}`; const fb = feedback.find((y) => y.finding_id === fid);
+      const fid = `${step}#${i}`;
+      // match a saved click by its text, not only its place: related flags are now combined (Nov 20), so places moved
+      const fb = feedback.find((y) => y.finding_title && y.verdict !== 'missed' && (x.text.slice(0, 280) === y.finding_title || x.text.includes(String(y.finding_title).replace(/\s+\S*$/, '').slice(0, 120))))
+        || feedback.find((y) => y.finding_id === fid && !y.finding_title);
       return `<li class="${x.status}"><span class="mark">${x.status === 'ok' ? '✓' : x.status === 'flag' ? '!' : '☐'}</span><span>${esc(x.text)}</span>
         ${x.status === 'flag' ? `<span class="fbk">${fb ? `<em>${esc(fb.verdict.replace('_', ' '))}</em>` : `<button type="button" data-fb="correct" data-id="${esc(fid)}" data-t="${esc(x.text.slice(0, 280))}">Correct</button><button type="button" data-fb="wrong" data-id="${esc(fid)}" data-t="${esc(x.text.slice(0, 280))}">Wrong</button>`}</span>` : ''}</li>`;
     }).join('')}</ul>`;
@@ -107,7 +110,7 @@ function renderChecklist() {
   $('#checklist').querySelectorAll('[data-fb]').forEach((b) => b.addEventListener('click', async () => {
     const verdict = b.dataset.fb; let note = '';
     if (verdict === 'wrong') { note = prompt("What's wrong with this item? (This teaches the deed AI.)") || ''; if (!note.trim()) return; }
-    try { await api('feedback', { deed_id: deed.id, finding_id: b.dataset.id, finding_title: b.dataset.t, verdict, note, reviewer_name: reviewer() }); feedback.push({ finding_id: b.dataset.id, verdict }); renderChecklist(); }
+    try { await api('feedback', { deed_id: deed.id, finding_id: b.dataset.id, finding_title: b.dataset.t, verdict, note, reviewer_name: reviewer() }); feedback.push({ finding_id: b.dataset.id, finding_title: b.dataset.t, verdict }); renderChecklist(); }
     catch (e) { alert(e.message); }
   }));
 }

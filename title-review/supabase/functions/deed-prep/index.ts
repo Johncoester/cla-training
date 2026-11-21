@@ -78,7 +78,7 @@ async function getDeed(id: string) {
   const files = [];
   for (const f of (d.files || []) as any[]) { const { data } = await sb.storage.from(BUCKET).createSignedUrl(f.path, 3600); files.push({ name: f.name, kind: f.kind, url: data?.signedUrl ?? null }); }
   d.files = files; delete d.raw_output;
-  const fb = await sql`select finding_id, verdict, note, reviewer_name from title_review.feedback where deed_id = ${id}`;
+  const fb = await sql`select finding_id, finding_title, verdict, note, reviewer_name from title_review.feedback where deed_id = ${id}`;
   return { deed: d, feedback: fb };
 }
 async function statuses(ids: unknown) {
@@ -156,7 +156,9 @@ Follow CLA's Deed Preparation Checklist (Cris Bolea, Nov 2026) and CLA's deed no
 - Recorded matters that CLA carries onto the deed (front foot benefit / deferred water and sewer liens, MPDU covenants, condominium common elements, ground rent / leasehold) go in extraClauses, copied word for word from the vesting deed.
 - Never include SSNs, account numbers or dates of birth.
 - If something is not in the documents, leave it empty and say what is missing in flags. Do not guess names, dates, libers or folios.
-- flags are ONLY problems that affect THIS DEED and need someone to act (wrong or missing party, name spelling, marital status, tenancy, estate/trust/entity authority, legal description, price, vesting, deed-specific tax exemption). One short sentence on the problem, one on what to do. Never flag things that are fine, and leave out commitment, payoff, tax-bill, HOA and loan issues: the title review covers those. At most 8 flags.
+- flags are ONLY problems that affect THIS DEED and need someone to act (wrong or missing party, name spelling, how the buyers take title, estate/trust/entity authority, legal description, price, deed-specific tax exemption). One short sentence on the problem, one on what to do. Never flag things that are fine, and leave out commitment, payoff, tax-bill, HOA and loan issues: the title review covers those. At most 8 flags.
+- ONE flag per problem (CLA team, Nov 20): put related points in the same flag. How the buyers take title, their marital status and the wife/husband order are ONE flag. Everything about one person (spelling, which name to use, how they sign) is ONE flag.
+- Do not ask about anything the contract, the vesting deed or the other documents already answer, and do not ask questions that cannot change the deed: one buyer in their own name can only take title as sole owner; in Maryland a seller's marital status is not needed on the deed and no spouse joinder is needed (only flag a divorce or death that changes who owns or must sign).
 - Name differences that are only word order or capitalization (SDAT style "SMITH JOHN A") are not problems; real spelling differences are.`;
 
 function factsPrompt(d: any, corrections: any[]) {

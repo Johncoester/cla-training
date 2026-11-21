@@ -225,14 +225,24 @@ export function deedText(blocks) {
 /* ---------- the checklist ---------- */
 // Name matching for "sellers must match" (John, Nov 19): the same person written two ways should match ("John A. Smith" vs "John Smith"),
 // a different person or a missing owner should not.
-const NOISE = new Set(['etal', 'et', 'al', 'and', 'trustee', 'trustees', 'of', 'the', 'revocable', 'irrevocable', 'living', 'trust', 'estate', 'personal', 'representative', 'mr', 'mrs', 'ms', 'dr']);
+const NOISE = new Set(['etal', 'et', 'al', 'and', 'trustee', 'trustees', 'of', 'the', 'revocable', 'irrevocable', 'living', 'trust', 'estate', 'personal', 'representative', 'mr', 'mrs', 'ms', 'dr',
+  'signed', 'typed', 'printed', 'as', 'successor', 'pr', 'aif', 'poa']);
 export function nameKey(n) { return clean(n).toLowerCase().replace(/[.,]/g, ' ').replace(/\s+/g, ' ').trim(); }
-const tokens = (n) => nameKey(n).split(' ').filter((t) => t && !NOISE.has(t));
+// the person, not their role: "Rose M. Trovato, Trustee named as Trustee in the Last Will and Testament of Robert L. Kokta" is Rose M.
+// Trovato (Robert Kokta's name in the role must not make her look like him); "ROSE M TROVATO TRUSTEE (typed)" and "signed 'Rose Trovato'" too
+export function personPart(n) {
+  let s = clean(n).replace(/\([^)]*\)/g, ' ').replace(/['"\u2018\u2019\u201c\u201d]/g, ' ');
+  s = s.replace(/,\s*(as\s+)?(successor\s+)?(co-?)?(trustees?|personal representatives?|attorney[- ]in[- ]fact|executors?|executrix|administrat\w+)\b.*$/i, '');
+  s = s.replace(/\s+(as\s+)?(trustees?|personal representatives?)\s+(of|under|named|for)\b.*$/i, '');
+  return s.replace(/\b(signed|typed|printed)\b/gi, ' ').replace(/\s+/g, ' ').trim();
+}
+const tokens = (n) => nameKey(personPart(n)).split(' ').filter((t) => t && !NOISE.has(t));
 // One contract line can hold several people, SDAT style ("MADURO NOVIA SUNDAY ETAL & WEIDENHAFT JEFFREY BAYN"): split it.
 export function splitNames(list) {
   const out = [];
   for (const x of list || []) for (const part of String(x).split(/\s+&\s+|\s+and\s+(?=[A-Z])|;\s*/)) { const c = clean(part.replace(/\bET\s*AL\b\.?/i, '')); if (c) out.push(c); }
-  return out;
+  // one person written twice ("ROSE M TROVATO TRUSTEE (typed); signed 'Rose Trovato'") is one seller (Caroline, Nov 20)
+  return out.filter((c, i) => !out.slice(0, i).some((d) => sameName(c, d)));
 }
 // The same person written two ways should match ("John A. Smith", "SMITH JOHN A", "John C Gaughan Revocable Trust" vs
 // "John C. Gaughan, Trustee of the John C. Gaughan Revocable Trust"); a different person should not. Match = same first and last
@@ -293,7 +303,8 @@ export function checkDeed(facts) {
   const owners = f.ownersOfRecord || [];
   const sellers = splitNames(f.contractSellers);
   if (!owners.length) add('2. Parties', 'flag', 'Owners of record (from the vesting deed) were not found in the search.');
-  if (!sellers.length) add('2. Parties', 'flag', 'Sellers were not found in the contract. Upload the full contract.');
+  const isSale = !f.deedType || f.deedType === 'sale';   // a gift or adding-a-family-member deed has no contract (Cris, Nov 20)
+  if (!sellers.length && isSale) add('2. Parties', 'flag', 'Sellers were not found in the contract. Upload the full contract.');
   const living = owners.filter((o) => !(f.deaths || []).some((d) => sameName(d.name, o)));
   if (owners.length && sellers.length) {
     const titleVsContract = compareNames(living, sellers);
@@ -303,7 +314,7 @@ export function checkDeed(facts) {
     for (const [a, b] of titleVsContract.spelled) add('2. Parties', 'flag', `Name differs: "${a}" on title vs "${b}" on the contract. The deed uses the title name; add an "also known as" if needed.`);
     if (!titleVsContract.missing.length && !contractVsTitle.missing.length && !titleVsContract.spelled.length) add('2. Parties', 'ok', `Sellers on the contract match the owners on title: ${listAnd(living)}.`);
   }
-  for (const d of f.deaths || []) {
+  for (const d of (f.deaths || []).filter((y) => owners.some((o) => sameName(y.name, o)))) {   // only an owner of record who died matters to this deed
     const pr = (f.grantors || []).some((x) => x.kind === 'personal_representative');
     add('2. Parties', pr || d.survivorshipCovers ? 'ok' : 'flag', pr || d.survivorshipCovers ? `${d.name} is deceased (${longDate(d.diedOn)}); ${pr ? 'the personal representative signs' : 'title passed to the survivor'}.` : `${d.name} is deceased but no personal representative is on the deed. Get the estate papers (letters of administration) or proof title passed by survivorship.`);
   }
@@ -320,7 +331,7 @@ export function checkDeed(facts) {
     const c = compareNames(buyers, (f.grantees || []).map((x) => x.name));
     for (const m of c.missing) add('2. Parties', 'flag', `${m} is a buyer on the contract but not a grantee on the deed. Confirm vesting instructions (assignment or addendum?).`);
     if (!c.missing.length) add('2. Parties', 'ok', `Grantees match the buyers on the contract: ${listAnd(buyers)}.`);
-  } else add('2. Parties', 'flag', 'Buyers were not found in the contract.');
+  } else if (isSale) add('2. Parties', 'flag', 'Buyers were not found in the contract.');
 
   for (const x of f.grantees || []) if (/\btrust\b/i.test(x.name) && !/trustee/i.test(x.name)) add('2. Parties', 'flag', `"${clean(x.name)}" is a trust. A trust takes title through its trustees: the grantee must read "[names], Trustees of the [trust name] dated [date]". Get the trustees' names and the trust date before the deed goes out.`);
   // tenancy rules + IMPORTANT NOTES
@@ -328,7 +339,8 @@ export function checkDeed(facts) {
   if (f.tenancy === 'sole' && n !== 1) add('2. Parties', 'flag', `"Sole Owner" but there are ${n} grantees.`);
   if (f.tenancy === 'tbe' && (n !== 2 || !f.granteesMarried)) add('2. Parties', 'flag', 'Tenants by the entirety is only for two grantees who are married to each other.');
   if (!f.tenancy) add('2. Parties', 'flag', 'How the buyers will take title (sole owner, tenants by the entirety, joint tenants, tenants in common) is not stated. Ask the buyers.');
-  else if (f.tenancySource !== 'stated') add('2. Parties', 'flag', `Tenancy "${TENANCIES[f.tenancy] || f.tenancy}" was assumed, not stated in the contract. Confirm vesting with the buyers.`);
+  // one buyer, or a company, can only take title one way: nothing to confirm (Eve, Nov 20: don't ask what the file already answers)
+  else if (f.tenancySource !== 'stated' && f.tenancy !== 'entity' && !(f.tenancy === 'sole' && n === 1)) add('2. Parties', 'flag', `Tenancy "${TENANCIES[f.tenancy] || f.tenancy}" was assumed, not stated in the contract. Confirm vesting with the buyers.`);
   if (f.granteesMarried && n === 2) {
     const ph = maritalPhrase(f);
     add('6. Drafting', ph === 'spouses' ? 'flag' : 'ok', ph === 'spouses' ? "Couldn't tell which grantee is the wife and which is the husband. Confirm so the deed reads \"wife and husband\" or \"husband and wife\" in name order." : `Marital status reads "${ph}", in the order the names appear (a woman named first is "wife and husband").`);
@@ -359,5 +371,70 @@ export function checkDeed(facts) {
   if (f.principalResidence) add('5. Taxes', 'todo', 'Owner Occupancy Affidavit signed by the buyers.');
   if (f.firstTimeBuyer) add('5. Taxes', 'todo', 'Affidavit of Grantee as First-Time Maryland Home Buyer (state transfer tax exemption).');
   add('8. Legal review', clean(f.attorney) || DEED_SETTINGS.attorney ? 'todo' : 'flag', clean(f.attorney) || DEED_SETTINGS.attorney ? `Attorney review and approval: ${clean(f.attorney) || DEED_SETTINGS.attorney}.` : 'No attorney named yet. Type the reviewing attorney under Key facts; the name goes on the preparation certificate.');
-  return out;
+  return tidyFlags(out, f);
+}
+
+/* ONE FLAG PER PROBLEM (Eve, Nov 20: "combine related findings and avoid repeated flags ... buyer vesting and manner of taking title can
+ * be combined into one finding"). The checklist's own checks and the AI's notes often say the same thing twice. Flags about the same
+ * subject become one item, in the place of the first, with each different point kept once:
+ * - how the buyers take title, their marital status, and wife/husband order: one "vesting" item;
+ * - the same person (a name, a spelling, a trustee who signs for them): one item per person;
+ * - the legal description, the trust buyer, the missing contract, first-time buyer: one item each.
+ * A seller's marital status on its own is dropped: in Maryland it is not needed on the deed (John, Nov 20). A divorce or a death that
+ * changes who owns the property is kept. */
+// split into sentences, but not after an initial or a short abbreviation ("Hamid R. Ali Khani", "Liber 123, p. 4", "Mrs. Smith")
+const sentences = (t) => String(t || '').replace(/\s+/g, ' ').trim().split(/(?<=[.!?])(?<!\b[A-Z]\.)(?<!\b(?:Mr|Mrs|Ms|Dr|St|No|p|pp|Jr|Sr|Inc|Co|vs|v)\.)\s+(?=[A-Z"'(])/).map((x) => x.trim()).filter(Boolean);
+const words = (t) => new Set(String(t).toLowerCase().replace(/[^a-z0-9 ]/g, ' ').split(' ').filter((w) => w.length > 3));
+// the same point said twice: nearly all the words of the shorter sentence are in the other one
+function sameSentence(a, b) { const A = words(a), B = words(b); if (A.size < 4 || B.size < 4) return a === b; let k = 0; for (const w of A) if (B.has(w)) k++; return k / Math.min(A.size, B.size) >= 0.8; }
+export function combineTexts(texts) {
+  const kept = [];
+  for (const t of texts) for (const sn of sentences(t)) if (!kept.some((k) => sameSentence(k, sn))) kept.push(sn);
+  return kept.join(' ');
+}
+// a fact that changes who owns or signs (a divorce that happened, a death), as opposed to "confirm marital status" or "divorce check"
+const SELLER_STATUS = /divorced|absolute divorce|divorce (judgment|decree|case)|judgment of (absolute )?divorce|deceas|\bdied\b|death certificate|widow|estate of|personal representative/i;
+export function flagTopic(text, people) {
+  const t = String(text || '');
+  if (/no attorney named/i.test(t)) return 'attorney';
+  if (/not found in the contract|no (sales )?contract\b/i.test(t)) return 'no-contract';
+  if (/marital status|married|marriage|spouse/i.test(t) && /\b(sellers?|grantors?)\b/i.test(t) && !/\b(buyers?|grantees?)\b/i.test(t) && !SELLER_STATUS.test(t)) return 'drop';
+  if (SELLER_STATUS.test(t) && /\b(sellers?|grantors?|owners?)\b/i.test(t) && /marital|divorc/i.test(t)) return 'seller-status';
+  if (/first-time/i.test(t)) return 'first-time';
+  if (/legal description|exhibit a\b/i.test(t)) return 'legal';
+  if (/\btrusts?\b/i.test(t) && /\b(buyers?|grantees?)\b/i.test(t)) return 'trust-buyer';
+  if (/\btenan|vesting(?! deed)|takes? title|taking title|sole owner|joint tenants|married to each other|wife and husband|husband and wife|\bgenders?\b|marital status/i.test(t)) return 'vesting';
+  const low = t.toLowerCase();   // the people on the file the flag names
+  const who = people.filter((p) => new RegExp(`\\b${p}\\b`).test(low));
+  return who.length ? { people: who } : null;
+}
+export function tidyFlags(items, f = {}) {
+  // the people on the file, by last name (4+ letters), so "Name differs: Jeffrey Bayne Weidenhaft" and the AI's note on "WEIDENHAFT JEFFREY BAYN" meet
+  const names = [...(f.ownersOfRecord || []), ...splitNames(f.contractSellers), ...splitNames(f.contractBuyers), ...(f.grantees || []).map((x) => x.name), ...(f.grantors || []).map((x) => x.name)];
+  // every name word of 4+ letters ("weidenhaft", "bayne", "maduro"), so the SDAT order and a misspelling still meet
+  const people = [...new Set(names.flatMap((n) => tokens(n).filter((x) => x.length >= 4 && /^[a-z'-]+$/.test(x))))];
+  const g = f.grantees || [];
+  const oneBuyer = g.length === 1 && (g[0].kind || 'individual') === 'individual' && !/\btrust\b/i.test(g[0].name || '');
+  const out = []; const at = new Map();
+  for (const it of items) {
+    if (it.status !== 'flag') { out.push(it); continue; }
+    const topic = flagTopic(it.text, people);
+    if (topic === 'drop') continue;
+    // one person buying in their own name can only take title one way: their marital status and "how they take title" need no question
+    if (topic === 'vesting' && oneBuyer && !/\badd|three|\btrust|\bllc\b|entity|company|co-?owner/i.test(it.text)) continue;
+    if (topic && typeof topic === 'object') {   // the same person: join the item that already names any of them
+      const hit = out.find((o) => o.people && o.people.some((p) => topic.people.includes(p)));   // a person item, or the trust-buyer item naming them
+      if (hit) { hit.parts.push(it.text); topic.people.forEach((p) => { if (!hit.people.includes(p)) hit.people.push(p); }); }
+      else out.push({ ...it, parts: [it.text], people: [...topic.people] });
+      continue;
+    }
+    if (!topic || !at.has(topic)) {
+      if (topic) at.set(topic, out.length);
+      // the trust buyer's own names (its trustees, its date) belong with it
+      const named = topic === 'trust-buyer' ? people.filter((p) => new RegExp(`\\b${p}\\b`).test(it.text.toLowerCase())) : null;
+      out.push({ ...it, parts: [it.text], ...(named && named.length ? { people: named } : {}) }); continue;
+    }
+    const first = out[at.get(topic)]; first.parts.push(it.text);
+  }
+  return out.map((it) => { if (!it.parts) return it; const { parts, people: _p, ...rest } = it; return parts.length > 1 ? { ...rest, text: combineTexts(parts), combined: parts.length } : rest; });
 }

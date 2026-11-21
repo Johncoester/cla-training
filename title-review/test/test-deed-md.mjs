@@ -77,4 +77,37 @@ ok(dv.includes('by and between Novia Sunday Maduro, divorced, and Jeffrey Bayne 
 const hw = norm(deedText(buildDeed({ ...tbe, grantorsMarried: true, grantors: [{ name: 'John Doe', kind: 'individual', gender: 'M' }, { name: 'Jane Doe', kind: 'individual', gender: 'F' }] })));
 ok(hw.includes('by and between John Doe and Jane Doe, husband and wife, parties of the first part'), 'married sellers: husband and wife in name order');
 ok(!checkDeed(tbe).some((x) => /Marital status of seller/.test(x.text)), 'MD: no flag when a seller\'s marital status is unknown (marriage not needed)');
+
+// ---- one flag per problem (Eve, Caroline and Cris, Nov 20) ----
+const flagsOf = (f) => checkDeed(f).filter((x) => x.status === 'flag');
+// Eve: "buyer vesting and manner of taking title can be combined into one finding"
+const two = { ...tbe, tenancySource: 'assumed', flags: [{ step: '2. Parties', text: "The buyers' marital status is not stated in the contract. Confirm whether they are married to each other." },
+  { step: '2. Parties', text: 'The contract does not say how the buyers take title. Confirm vesting with the buyers.' }] };
+const vest = flagsOf(two).filter((x) => /take title|tenan|married/i.test(x.text));
+ok(vest.length === 1 && vest[0].combined >= 2, 'how the buyers take title and their marital status are one item');
+ok(/married to each other/.test(vest[0].text) && /how the buyers take title/.test(vest[0].text), 'the combined item keeps each different point');
+// a seller's marital status alone is dropped (MD); a divorce that changes ownership is kept
+const ms = flagsOf({ ...tbe, flags: [{ step: '2. Parties', text: "Seller's marital status is not stated. Confirm it with the seller." },
+  { step: '2. Parties', text: 'The sellers were divorced in 2020 (judgment of absolute divorce) but still hold as tenants by the entirety. Get the divorce decree.' }] });
+ok(!ms.some((x) => /not stated\. Confirm it with the seller/.test(x.text)) && ms.some((x) => /divorced in 2020/.test(x.text)), "a seller's marital status alone is dropped; a divorce is kept");
+// one buyer in their own name: no question about how they take title
+const one = { ...tbe, tenancy: 'sole', tenancySource: 'assumed', granteesMarried: false, grantees: [{ name: 'Cheryl Eleady-Cole', kind: 'individual', gender: 'F' }], contractBuyers: ['Cheryl Eleady-Cole'],
+  flags: [{ step: '2. Parties', text: "Buyer's marital status is not stated in the contract. Obtain it from Cheryl Eleady-Cole." }] };
+ok(!flagsOf(one).some((x) => /take title|marital|vesting/i.test(x.text)), 'one buyer: no vesting or marital question');
+// the same person flagged by the checklist and by the AI is one item
+const sp = flagsOf({ ...tbe, ownersOfRecord: ['Novia Sunday Maduro', 'Jeffrey Bayne Weidenhaft'], contractSellers: ['MADURO NOVIA SUNDAY ETAL & WEIDENHAFT JEFFREY BAYN'],
+  grantors: [{ name: 'Novia Sunday Maduro', kind: 'individual', gender: 'F' }, { name: 'Jeffrey Bayne Weidenhaft', kind: 'individual', gender: 'M' }],
+  flags: [{ step: '2. Parties', text: "The contract writes the seller as 'WEIDENHAFT JEFFREY BAYN'; the vesting deed has Bayne. Confirm the spelling with the seller." }] });
+ok(sp.filter((x) => /Bayn/.test(x.text)).length === 1, 'a spelling flagged twice (checklist and AI) is one item');
+// Caroline: a trustee written twice on the contract is one seller, and her role's words don't make her look like someone else
+const tru = flagsOf({ ...tbe, ownersOfRecord: ['Rose M. Trovato, Trustee named as Trustee in the Last Will and Testament of Robert L. Kokta'],
+  contractSellers: ["ROSE M TROVATO TRUSTEE (typed); signed 'Rose Trovato'"], deaths: [{ name: 'Robert L. Kokta', diedOn: '2011-02-25', survivorshipCovers: false }],
+  grantors: [{ name: 'Rose M. Trovato', kind: 'trustee', signer: 'Rose M. Trovato', trustName: 'Trustee named in the Last Will and Testament of Robert L. Kokta' }],
+  grantees: [{ name: 'HK Equity Group LLC', kind: 'entity' }], tenancy: 'entity', tenancySource: 'assumed', contractBuyers: ['HK EQUITY GROUP LLC'] });
+ok(!tru.some((x) => /is not an owner on title/.test(x.text)), 'the trustee who signed the contract is the owner on title (not flagged twice as a stranger)');
+ok(!tru.some((x) => /Kokta is deceased/.test(x.text)), 'a death earlier in the chain, not of a current owner, is not flagged');
+ok(!tru.some((x) => /Tenancy "entity" was assumed/.test(x.text)), 'a company buyer: no "how do they take title" question');
+// Cris: a gift deed has no contract, so no "not found in the contract" flags
+const gift = flagsOf({ ...tbe, deedType: 'gift', contractSellers: [], contractBuyers: [] });
+ok(!gift.some((x) => /not found in the contract/.test(x.text)), 'a gift deed is not asked for a contract');
 console.log(fail ? `\n${fail} failed` : '\nall passed'); process.exit(fail ? 1 : 0);
