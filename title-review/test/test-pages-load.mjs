@@ -13,7 +13,7 @@ const queue = [
 for (const q of [[], queue]) {
   globalThis.document = { querySelector: () => el(), querySelectorAll: () => [], createElement: () => el(), addEventListener() {} };
   globalThis.localStorage = { getItem: (k) => (k === 'clatr_queue' ? JSON.stringify(q) : ''), setItem() {} };
-  globalThis.window = { supabase: { createClient: () => el() } };
+  globalThis.window = { supabase: { createClient: () => el() }, addEventListener() {} };   // a real browser window has addEventListener (the deed request form listens for its module)
   globalThis.fetch = async () => ({ ok: true, json: async () => ({ reviews: [], deeds: [] }) });
   globalThis.setInterval = () => 0;
   const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');

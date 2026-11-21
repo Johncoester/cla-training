@@ -3,6 +3,7 @@
  * to start a deed from a finished title review. In the portal, the same two data modules take a file's facts instead. */
 import { buildDeed, checkDeed, deedText, DEED_SETTINGS, DEED_TYPES } from '../data/deed-md.js?v=202611202200';
 import { deedToDocx } from '../data/deed-docx.js?v=202611192300';
+import { requestLines } from '../data/deed-request.js?v=202611202300';
 
 const CFG = { url: 'https://upkrpewcsvfltqwmxmjs.supabase.co', key: 'sb_publishable_L1f8ADmFXkPqsSGvLMibDA_6uah2q6v' };
 const FN = CFG.url + '/functions/v1/deed-prep';
@@ -51,6 +52,10 @@ function render() {
   $('#app').classList.remove('hidden');
   $('#fileNo').textContent = deed.file_no || '(no file number)';
   $('#cost').textContent = deed.usage && deed.usage.est_cost_usd != null ? `$${Number(deed.usage.est_cost_usd).toFixed(2)}` : '';
+  // Deed only (no contract): the deed request form the deed was prepared from (John, Nov 20)
+  const rq = deed.request ? requestLines(deed.request) : [];
+  $('#request').classList.toggle('hidden', !rq.length);
+  $('#request').innerHTML = rq.length ? `<h3>Deed request (no contract)</h3><dl class="rq">${rq.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join('')}</dl>` : '';
   renderFacts(); renderChecklist(); renderDeed();
   $('#approved').textContent = deed.approved_by ? `Approved by ${deed.approved_by} on ${new Date(deed.approved_at).toLocaleString()}` : 'Not approved yet.';
 }

@@ -31,6 +31,7 @@ Deno.serve(async (req) => {
       case "save_edits": return json(await saveEdits(body));
       case "approve": return json(await approve(body));
       case "feedback": return json(await feedback(body));
+      case "list": return json(await listDeedOnly());
       default: return json({ error: "Unknown action" }, 400);
     }
   } catch (e) { console.error(e); return json({ error: String((e as Error)?.message ?? e) }, 500); }
@@ -50,9 +51,10 @@ async function fromReview(b: any) {
 // Deed on its own: the page uploads the contract and search through signed links, then calls start.
 async function createDeed(b: any) {
   const files = Array.isArray(b.files) ? b.files.slice(0, 12) : [];
-  if (!files.some((f: any) => f.kind === "contract")) throw new Error("Add the sales contract. The deed needs the sellers, buyers and price from it.");
+  const request = b.deed_only ? checkRequest(b.request) : null;   // Deed only (no contract): the deed request form takes the contract's place
+  if (!request && !files.some((f: any) => f.kind === "contract")) throw new Error("Add the sales contract. The deed needs the sellers, buyers and price from it.");
   if (!files.some((f: any) => f.kind === "search")) throw new Error("Add the search package. The deed needs the vesting deed and legal description from it.");
-  const [d] = await sql`insert into title_review.deeds (file_no, reviewer_name, status) values (${clip(b.file_no, 60)}, ${clip(b.reviewer_name, 80)}, 'uploading') returning id`;
+  const [d] = await sql`insert into title_review.deeds (file_no, reviewer_name, status, request) values (${clip(b.file_no, 60)}, ${clip(b.reviewer_name, 80)}, 'uploading', ${request ? sql.json(request) : null}) returning id`;
   const uploads = [], meta = [];
   for (let i = 0; i < files.length; i++) {
     const f = files[i];
@@ -64,6 +66,27 @@ async function createDeed(b: any) {
   }
   await sql`update title_review.deeds set files = ${sql.json(meta)} where id = ${d.id}`;
   return { id: d.id, uploads };
+}
+// the page checks the form with js/data/deed-request.js (cleanDeedRequest); this repeats the checks that matter so a bad call can't slip in
+const REQUEST_TYPES: Record<string, string> = { add_owner: "gift", remove_owner: "quitclaim", gift: "gift", divorce: "quitclaim", into_trust: "gift", into_llc: "into_llc", other: "quitclaim" };
+function checkRequest(r: any) {
+  if (!r || typeof r !== "object" || !REQUEST_TYPES[r.type]) throw new Error("Choose what the deed is for.");
+  const list = (v: unknown) => (Array.isArray(v) ? v : []).map((x) => clip(x, 120).trim()).filter(Boolean).slice(0, 6);
+  const out = { type: r.type, deedType: REQUEST_TYPES[r.type], newOwners: list(r.newOwners), tenancy: ["sole", "tbe", "jt", "tic", "entity"].includes(r.tenancy) ? r.tenancy : "",
+    leaving: list(r.leaving), entityName: clip(r.entityName, 160), trustees: list(r.trustees).slice(0, 4), consideration: r.consideration === "paid" ? "paid" : "none",
+    amount: r.consideration === "paid" ? Number(r.amount) || 0 : 0, relationship: clip(r.relationship, 160), mortgage: ["yes", "no", "unknown"].includes(r.mortgage) ? r.mortgage : "",
+    lender: clip(r.lender, 120), residence: ["yes", "no", "unknown"].includes(r.residence) ? r.residence : "", requestedBy: clip(r.requestedBy, 160), notes: clip(r.notes, 1500) };
+  if (!out.newOwners.length) throw new Error("Type who will own the property after the deed.");
+  if (!out.tenancy) throw new Error("Choose how the new owners will hold title.");
+  if (out.consideration === "paid" && !(out.amount > 0)) throw new Error("Type the amount being paid.");
+  if (out.consideration === "none" && out.relationship.length < 3) throw new Error("Say how the people are related. The clerk needs it for the tax exemption.");
+  if (!out.mortgage || !out.residence) throw new Error("Answer the mortgage and main-home questions.");
+  return out;
+}
+async function listDeedOnly() {
+  const rows = await sql`select id, created_at, file_no, reviewer_name, status, request->>'type' as request_type, (usage->>'est_cost_usd')::numeric as cost
+                         from title_review.deeds where review_id is null and request is not null order by created_at desc limit 100`;
+  return { deeds: rows };
 }
 async function startDeed(id: string) {
   const [r] = await sql`update title_review.deeds set status = 'queued', error = null, raw_output = null where id = ${id} and status in ('uploading','error') returning id`;
@@ -161,9 +184,29 @@ Follow CLA's Deed Preparation Checklist (Cris Bolea, Nov 2026) and CLA's deed no
 - Do not ask about anything the contract, the vesting deed or the other documents already answer, and do not ask questions that cannot change the deed: one buyer in their own name can only take title as sole owner; in Maryland a seller's marital status is not needed on the deed and no spouse joinder is needed (only flag a divorce or death that changes who owns or must sign).
 - Name differences that are only word order or capitalization (SDAT style "SMITH JOHN A") are not problems; real spelling differences are.`;
 
+// Deed only: the request form, in plain lines, instead of a sales contract
+function requestPrompt(r: any) {
+  if (!r) return "";
+  const L = [
+    `What the deed is for: ${r.type}`, `New owners after the deed: ${r.newOwners.join("; ")}`, `How they hold title: ${r.tenancy}`,
+    r.leaving?.length ? `Coming off the title: ${r.leaving.join("; ")}` : "", r.entityName ? `${r.type === "into_trust" ? "Trust" : "LLC"}: ${r.entityName}` : "",
+    r.trustees?.length ? `Trustees: ${r.trustees.join("; ")}` : "", `Consideration: ${r.consideration === "paid" ? "$" + r.amount : "none (no money changing hands)"}`,
+    r.relationship ? `Relationship: ${r.relationship}` : "", `Mortgage on the property: ${r.mortgage}${r.lender ? " (" + r.lender + ")" : ""}`, `Owners' main home: ${r.residence}`,
+    r.requestedBy ? `Requested by: ${r.requestedBy}` : "", r.notes ? `Notes: ${r.notes}` : ""].filter(Boolean);
+  return `THIS IS A DEED-ONLY REQUEST. THERE IS NO SALES CONTRACT, so do not look for one and never flag that it is missing.
+CLA's deed request form (filled in by CLA staff from the client's request; it takes the place of the contract):
+${L.join("\n")}
+Use it: deedType "${r.deedType}"; grantees = the new owners above (as written, unless an ID or document in the package shows the full legal name), and set
+grantees' kind "entity" for a trust or LLC; tenancy "${r.tenancy}", tenancySource "stated"; consideration ${r.consideration === "paid" ? r.amount : 0};
+contractSellers and contractBuyers empty. The grantors are still the current owners of record from the vesting deed. Flag only deed problems the
+form and the documents leave open (for example an owner of record who is not signing, or a trustee or LLC signer not named).
+
+`;
+}
+
 function factsPrompt(d: any, corrections: any[]) {
   const corr = corrections.length ? "RECENT CORRECTIONS FROM CLA's TEAM (do not repeat):\n" + corrections.map((c: any) => `- ${c.verdict === "missed" ? "MISSED" : "WRONG"}: ${c.finding_title ? c.finding_title + " - " : ""}${c.note || ""}`).join("\n") + "\n\n" : "";
-  return `${corr}File: ${d.file_no || "(none)"}. Return ONLY one JSON object, no other text, in this shape (dates as YYYY-MM-DD):
+  return `${corr}${requestPrompt(d.request)}File: ${d.file_no || "(none)"}. Return ONLY one JSON object, no other text, in this shape (dates as YYYY-MM-DD):
 {"deedType":"sale|gift|quitclaim|substitute_trustee|ground_rent_redemption|into_llc",
 "fileNo":"","propertyAddress":"street\\ncity, MD zip","county":"e.g. Montgomery or Baltimore City","taxId":"as on SDAT, e.g. 02-03414356",
 "legalDescription":"the description itself, word for word, starting at the lot/unit/metes-and-bounds text (leave out the granting lead-in \"all that lot of ground situate in ... that is to say:\"), paragraphs separated by a blank line","legalSource":"vesting deed | commitment Schedule A | ...","legalMatchesCommitment":true,"legalDiffNote":"",

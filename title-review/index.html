@@ -94,6 +94,11 @@ input:focus-visible, select:focus-visible, textarea:focus-visible, button:focus-
 .choice { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px; }
 .choice label { display: flex; gap: 10px; align-items: flex-start; border: 1px solid var(--line); border-radius: 8px; padding: 12px; cursor: pointer; }
 .choice label:has(input:checked) { border-color: var(--accent); background: var(--accent-soft); }
+.intake { border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px; margin-top: 14px; }
+.intake legend { font-weight: 600; padding: 0 6px; }
+.intake .span2 { grid-column: 1 / -1; }
+.intake textarea { min-height: 0; }
+#reviewOnly { display: contents; }
 .needbox { margin-top: 10px; padding: 10px 12px; border-left: 3px solid var(--accent); background: var(--paper); font-size: 13.5px; }
 .hidden { display: none !important; }
 .actions { display: flex; gap: 10px; align-items: center; margin-top: 18px; flex-wrap: wrap; }
@@ -192,8 +197,57 @@ ol.qs { margin: 0; padding-left: 20px; display: grid; gap: 6px; font-size: 14px;
       <div class="choice" role="radiogroup" aria-label="What do you need?">
         <label><input type="radio" name="need" value="review" checked> <span><strong>Title review</strong><br><span class="note">Checks the search and commitment against CLA's rules.</span></span></label>
         <label><input type="radio" name="need" value="deed"> <span><strong>Title review + deed prep</strong><br><span class="note">Also drafts the deed in CLA's wording and runs the deed checklist.</span></span></label>
+        <label><input type="radio" name="need" value="deed_only"> <span><strong>Deed only (no contract)</strong><br><span class="note">No sale: adding or removing someone, a gift, after a divorce, into a trust or LLC.</span></span></label>
       </div>
       <div class="needbox" id="needBox"></div>
+      <fieldset class="intake hidden" id="intake">
+        <legend>Deed request</legend>
+        <p class="hint">Fill this in from the client's request. It takes the place of the contract. The current owners come from the vesting deed in the search.</p>
+        <div class="grid">
+          <label for="rqType" class="span2">What is the deed for? *
+            <select id="rqType"><option value="">Choose…</option></select>
+          </label>
+          <label for="rqNew" class="span2">Who will own the property after the deed? * <span class="note">Full legal names, one per line. Include anyone who stays on.</span>
+            <textarea id="rqNew" rows="3" placeholder="Hamid Reza Ali Khani&#10;Elaheh Bidgoli&#10;Hadiseh Alikhani"></textarea>
+          </label>
+          <label for="rqTenancy" id="rqTenancyBox">How will they hold title? *
+            <select id="rqTenancy"><option value="">Choose…</option></select>
+          </label>
+          <label for="rqLeaving" id="rqLeavingBox" class="hidden">Who is coming off the title? *
+            <textarea id="rqLeaving" rows="2" placeholder="One name per line"></textarea>
+          </label>
+          <label for="rqEntity" id="rqEntityBox" class="hidden span2"><span id="rqEntityLabel">Trust name (and date)</span> *
+            <input type="text" id="rqEntity" autocomplete="off">
+          </label>
+          <label for="rqTrustees" id="rqTrusteesBox" class="hidden span2">Trustee or trustees * <span class="note">One per line</span>
+            <textarea id="rqTrustees" rows="2"></textarea>
+          </label>
+          <label for="rqConsideration">Is money changing hands? *
+            <select id="rqConsideration"><option value="none">No money is changing hands (gift)</option><option value="paid">Yes, an amount is being paid</option></select>
+          </label>
+          <label for="rqAmount" id="rqAmountBox" class="hidden">Amount *
+            <input type="text" id="rqAmount" inputmode="decimal" placeholder="$0.00">
+          </label>
+          <label for="rqRelationship" class="span2">How are the people related? <span id="rqRelReq">*</span> <span class="note">The clerk needs this for the tax exemption.</span>
+            <input type="text" id="rqRelationship" placeholder="Parents to their daughter" autocomplete="off">
+          </label>
+          <label for="rqMortgage">Is there a mortgage on the property? *
+            <select id="rqMortgage"><option value="">Choose…</option><option value="yes">Yes</option><option value="no">No</option><option value="unknown">Don't know</option></select>
+          </label>
+          <label for="rqLender" id="rqLenderBox" class="hidden">Lender
+            <input type="text" id="rqLender" placeholder="RoundPoint" autocomplete="off">
+          </label>
+          <label for="rqResidence">Do the owners live there as their main home? *
+            <select id="rqResidence"><option value="">Choose…</option><option value="yes">Yes</option><option value="no">No</option><option value="unknown">Don't know</option></select>
+          </label>
+          <label for="rqBy">Requested by
+            <input type="text" id="rqBy" placeholder="Client name and email" autocomplete="off">
+          </label>
+          <label for="rqNotes" class="span2">Anything else about the request
+            <textarea id="rqNotes" rows="2" placeholder="Paste the client's email here if it helps"></textarea>
+          </label>
+        </div>
+      </fieldset>
       <h2 style="margin-top:22px">2. File details</h2>
       <p class="hint">Use the Qualia file number so feedback lines up with the file.</p>
       <div class="grid">
@@ -203,12 +257,14 @@ ol.qs { margin: 0; padding-left: 20px; display: grid; gap: 6px; font-size: 14px;
         <label for="state">State
           <select id="state"><option>MD</option><option>DC</option><option>VA</option><option>FL</option></select>
         </label>
+        <div id="reviewOnly">
         <label for="txType">Transaction
           <select id="txType"><option>Purchase</option><option>Refinance</option><option>Cash purchase</option><option>HELOC / 2nd</option><option>Commercial</option><option>REO / foreclosure purchase</option></select>
         </label>
         <label for="underwriter">Underwriter
           <select id="underwriter"><option>Fidelity National (FNTIC)</option><option>Doma / NATIC</option><option>Other</option></select>
         </label>
+        </div>
       </div>
 
       <h2 style="margin-top:22px">3. Upload PDFs</h2>
@@ -269,6 +325,15 @@ ol.qs { margin: 0; padding-left: 20px; display: grid; gap: 6px; font-size: 14px;
         </table>
       </div>
     </div>
+    <div class="card" style="margin-top:20px">
+      <div class="section-title"><h2>Deeds with no contract</h2><span class="note">Deed only requests (adding or removing someone, gifts, trusts, LLCs)</span></div>
+      <div class="tablewrap" style="margin-top:12px">
+        <table>
+          <thead><tr><th>Date</th><th>File</th><th>What it's for</th><th>By</th><th>Status</th><th>Cost</th><th>Deed</th></tr></thead>
+          <tbody id="deedHistBody"><tr><td colspan="7" class="note">Loading…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
   </section>
 
   <section class="view" id="view-rules">
@@ -296,6 +361,10 @@ ol.qs { margin: 0; padding-left: 20px; display: grid; gap: 6px; font-size: 14px;
     <div class="stage"><p class="note" id="vMsg" style="color:#fff"></p><canvas id="vCanvas"></canvas></div>
   </div>
 </div>
+<script type="module">
+  import * as R from './js/data/deed-request.js?v=202611202300';
+  window.DeedRequest = R; window.dispatchEvent(new Event('deedrequest-ready'));
+</script>
 <script>
 const CFG = { url: "https://upkrpewcsvfltqwmxmjs.supabase.co", key: "sb_publishable_L1f8ADmFXkPqsSGvLMibDA_6uah2q6v" };
 const FN = CFG.url + "/functions/v1/title-review";
@@ -342,16 +411,44 @@ function showView(v) {
 /* what the user needs decides what they must upload (John, Nov 19: "make sure you ask user what they need to upload") */
 const NEED_TEXT = {
   review: '<strong>Upload:</strong> the <strong>search package</strong> (required). Add the <strong>draft commitment</strong> if you have one, so the AI can list what the team missed.',
+  deed_only: '<strong>Fill in the deed request below</strong>, then upload the <strong>search package</strong> (required: it has the vesting deed and legal description). Add the client\'s email, IDs, divorce decree, trust or LLC papers, or estate papers under Other documents.',
   deed: '<strong>Upload:</strong> the <strong>search package</strong> and the <strong>sales contract</strong> with all addenda (both required). Add the <strong>draft commitment</strong> if you have one. If a seller is an estate, trust or company, or an owner has died, add those papers under Other documents (letters of administration, death certificate, trust certification, LLC resolution).',
 };
 const need = () => (document.querySelector('input[name="need"]:checked') || {}).value || "review";
 function renderNeed() {
-  const deed = need() === "deed";
+  const deed = need() === "deed", only = need() === "deed_only";
   $("#needBox").innerHTML = NEED_TEXT[need()];
   $('.drop[data-slot="contract"]').classList.toggle("hidden", !deed);
-  $("#otherHint").textContent = deed ? "Estate, trust or company papers, death certificates, update search, survey" : "Update search, contract, lender instructions, survey, payoffs";
-  $("#run").textContent = deed ? "Run review + prepare deed" : "Run review";
+  $('.drop[data-slot="commitment"]').classList.toggle("hidden", only);
+  $("#intake").classList.toggle("hidden", !only);
+  $("#reviewOnly").classList.toggle("hidden", only);
+  $("#otherHint").textContent = only ? "Client's email, IDs, divorce decree, trust or LLC papers, estate papers" : deed ? "Estate, trust or company papers, death certificates, update search, survey" : "Update search, contract, lender instructions, survey, payoffs";
+  $("#run").textContent = only ? "Prepare deed" : deed ? "Run review + prepare deed" : "Run review";
 }
+/* the deed request form: only the boxes that apply to this kind of deed show */
+function fillIntake() {
+  const R = window.DeedRequest; if (!R) return;
+  if ($("#rqType").options.length < 2) {
+    $("#rqType").insertAdjacentHTML("beforeend", R.REQUEST_TYPES.map(([v, l]) => `<option value="${v}">${esc(l)}</option>`).join(""));
+    $("#rqTenancy").insertAdjacentHTML("beforeend", R.REQUEST_TENANCIES.filter(([v]) => v !== "entity").map(([v, l]) => `<option value="${v}">${esc(l)}</option>`).join(""));
+  }
+  const t = $("#rqType").value, entity = t === "into_trust" || t === "into_llc";
+  const many = $("#rqNew").value.split(/\n|;/).filter((x) => x.trim()).length > 1;
+  $("#rqTenancyBox").classList.toggle("hidden", entity || !many);
+  $("#rqLeavingBox").classList.toggle("hidden", t !== "remove_owner");
+  $("#rqEntityBox").classList.toggle("hidden", !entity);
+  $("#rqEntityLabel").textContent = t === "into_llc" ? "LLC name" : "Trust name (and date)";
+  $("#rqTrusteesBox").classList.toggle("hidden", t !== "into_trust");
+  $("#rqAmountBox").classList.toggle("hidden", $("#rqConsideration").value !== "paid");
+  $("#rqRelReq").textContent = $("#rqConsideration").value === "paid" ? "" : "*";
+  $("#rqLenderBox").classList.toggle("hidden", $("#rqMortgage").value !== "yes");
+}
+const intakeValues = () => ({ type: $("#rqType").value, newOwners: $("#rqNew").value, tenancy: $("#rqTenancy").value, leaving: $("#rqLeaving").value,
+  entityName: $("#rqEntity").value, trustees: $("#rqTrustees").value, consideration: $("#rqConsideration").value, amount: $("#rqAmount").value,
+  relationship: $("#rqRelationship").value, mortgage: $("#rqMortgage").value, lender: $("#rqLender").value, residence: $("#rqResidence").value,
+  requestedBy: $("#rqBy").value, notes: $("#rqNotes").value });
+["rqType", "rqNew", "rqConsideration", "rqMortgage"].forEach((id) => { $("#" + id).addEventListener("input", fillIntake); $("#" + id).addEventListener("change", fillIntake); });
+window.addEventListener("deedrequest-ready", fillIntake);
 document.querySelectorAll('input[name="need"]').forEach(r => r.addEventListener("change", renderNeed));
 renderNeed();
 
@@ -440,6 +537,7 @@ $("#form").addEventListener("submit", async (e) => {
   if (!files.search.length) { $("#runNote").textContent = "Add the search package first."; return; }
   if (!reviewer()) { $("#runNote").textContent = "Type your name at the top first, so feedback is credited to you."; $("#reviewer").focus(); return; }
   if (!sb) { $("#runNote").textContent = "The page didn't load fully. Refresh and try again."; return; }
+  if (need() === "deed_only") return runDeedOnly();
   const wantDeed = need() === "deed";
   if (wantDeed && !files.contract.length) { $("#runNote").textContent = "Add the sales contract. The deed needs the sellers, buyers and price from it. Your other files are still here."; return; }
   const all = [...files.search.map(f => ({ f, kind: "search" })), ...files.commitment.map(f => ({ f, kind: "commitment" })), ...(wantDeed ? files.contract : []).map(f => ({ f, kind: "contract" })), ...files.other.map(f => ({ f, kind: "other" }))];
@@ -477,6 +575,42 @@ $("#form").addEventListener("submit", async (e) => {
   }
   saveQueue(); renderQueue(); ensurePolling();
 });
+/* Deed only (no contract): the deed request form takes the contract's place (John, Nov 20). No title review runs. */
+async function runDeedOnly() {
+  if (!window.DeedRequest) { $("#runNote").textContent = "The page didn't load fully. Refresh and try again."; return; }
+  let request;
+  try { request = window.DeedRequest.cleanDeedRequest(intakeValues()); }
+  catch (err) { $("#runNote").textContent = err.message + " Your files and answers are still here."; return; }
+  const all = [...files.search.map(f => ({ f, kind: "search" })), ...files.other.map(f => ({ f, kind: "other" }))];
+  const total = all.reduce((a, x) => a + x.f.size, 0);
+  if (total > 25 * 1048576) { $("#runNote").textContent = "These files add up to more than 25 MB. Leave out extras or split the search package."; return; }
+  const fileNo = $("#fileNo").value.trim();
+  const dq = { id: null, type: "deed", file_no: fileNo, status: "uploading", progress: "Uploading PDFs", startedAt: Date.now() };
+  queue.unshift(dq);
+  files.search = []; files.commitment = []; files.contract = []; files.other = [];
+  ["search", "commitment", "contract", "other"].forEach(renderFileList);
+  $("#fileNo").value = ""; $("#notes").value = "";
+  ["rqType", "rqNew", "rqTenancy", "rqLeaving", "rqEntity", "rqTrustees", "rqAmount", "rqRelationship", "rqMortgage", "rqLender", "rqResidence", "rqBy", "rqNotes"].forEach((id) => { $("#" + id).value = ""; });
+  $("#rqConsideration").value = "none"; fillIntake();
+  $("#runNote").textContent = "Started. You can add the next file now.";
+  renderQueue(); ensurePolling();
+  try {
+    const created = await dapi("create", { deed_only: true, request, file_no: fileNo, reviewer_name: reviewer(), files: all.map(x => ({ name: x.f.name, kind: x.kind, bytes: x.f.size })) });
+    dq.id = created.id;
+    for (let i = 0; i < all.length; i++) {
+      dq.progress = `Uploading ${i + 1} of ${all.length}`; renderQueue();
+      const u = created.uploads[i];
+      const { error } = await sb.storage.from(BUCKET).uploadToSignedUrl(u.path, u.token, all[i].f, { contentType: "application/pdf" });
+      if (error) throw new Error("Upload failed for " + all[i].f.name + ". Check your connection, then add the file again.");
+    }
+    await dapi("start", { id: created.id });
+    dq.status = "running"; dq.progress = "Starting the deed"; dq.startedAt = Date.now();
+  } catch (err) {
+    dq.status = "error"; dq.error = err.message || String(err);
+    if (/Upload failed/.test(dq.error)) dq.id = null;
+  }
+  saveQueue(); renderQueue(); ensurePolling();
+}
 queue.forEach(q => { if (q.status === "uploading") { q.status = "error"; q.error = "The upload was interrupted when the page closed. Add the file again."; q.id = null; } });
 renderQueue();
 // Rows that show a problem may have been fixed or finished since; check them once on load.
@@ -686,6 +820,18 @@ async function loadHistory() {
       tr.addEventListener("keydown", (e) => { if (e.key === "Enter") open(); });
     });
   } catch (e) { body.innerHTML = `<tr><td colspan="10" class="note">${esc(e.message)}</td></tr>`; }
+  loadDeedHistory();
+}
+async function loadDeedHistory() {
+  const body = $("#deedHistBody");
+  try {
+    const { deeds } = await dapi("list");
+    const label = (t) => ((window.DeedRequest && window.DeedRequest.requestTypeOf(t)) || [t, t || ""])[1];
+    body.innerHTML = deeds.length ? deeds.map(x => `<tr><td>${esc(String(x.created_at).slice(0, 10))}</td><td class="mono">${esc(x.file_no || "-")}</td><td>${esc(label(x.request_type))}</td>
+      <td>${esc(x.reviewer_name || "")}</td><td>${esc(x.status === "done" ? "Done" : x.status === "error" ? "Failed" : "In progress")}</td><td>${x.cost != null ? "$" + Number(x.cost).toFixed(2) : ""}</td>
+      <td><a class="${x.status === "done" ? "btn" : ""}" href="deed.html?id=${esc(x.id)}">${x.status === "error" ? "Open to retry" : "Open deed"}</a></td></tr>`).join("")
+      : `<tr><td colspan="7" class="note">None yet. Choose "Deed only (no contract)" on New review.</td></tr>`;
+  } catch (e) { body.innerHTML = `<tr><td colspan="7" class="note">${esc(e.message)}</td></tr>`; }
 }
 async function openReview(id) {
   try {
