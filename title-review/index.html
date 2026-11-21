@@ -268,7 +268,7 @@ ol.qs { margin: 0; padding-left: 20px; display: grid; gap: 6px; font-size: 14px;
       </div>
 
       <h2 style="margin-top:22px">3. Upload PDFs</h2>
-      <p class="hint">Drag files onto a box or click it. Scanned pages are fine. Up to about 100 pages and 25 MB per review.</p>
+      <p class="hint">Drag files onto a box or click it. Scanned pages are fine. Up to about 100 pages. Files over 25 MB in all are made smaller automatically before they are sent.</p>
       <div class="drops">
         <div class="drop" data-slot="search" tabindex="0" role="button" aria-label="Upload search package">
           <strong>Search package</strong><span class="req">Required</span>
@@ -364,6 +364,7 @@ ol.qs { margin: 0; padding-left: 20px; display: grid; gap: 6px; font-size: 14px;
 <script type="module">
   import * as R from './js/data/deed-request.js?v=202611202300';
   window.DeedRequest = R; window.dispatchEvent(new Event('deedrequest-ready'));
+  import('./js/data/pdf-shrink.js?v=202611211100').then((m) => { window.PdfShrink = m; }).catch(() => { /* big files then get the plain size message */ });
 </script>
 <script>
 const CFG = { url: "https://upkrpewcsvfltqwmxmjs.supabase.co", key: "sb_publishable_L1f8ADmFXkPqsSGvLMibDA_6uah2q6v" };
@@ -540,9 +541,8 @@ $("#form").addEventListener("submit", async (e) => {
   if (need() === "deed_only") return runDeedOnly();
   const wantDeed = need() === "deed";
   if (wantDeed && !files.contract.length) { $("#runNote").textContent = "Add the sales contract. The deed needs the sellers, buyers and price from it. Your other files are still here."; return; }
-  const all = [...files.search.map(f => ({ f, kind: "search" })), ...files.commitment.map(f => ({ f, kind: "commitment" })), ...(wantDeed ? files.contract : []).map(f => ({ f, kind: "contract" })), ...files.other.map(f => ({ f, kind: "other" }))];
-  const total = all.reduce((a, x) => a + x.f.size, 0);
-  if (total > 25 * 1048576) { $("#runNote").textContent = "These files add up to more than 25 MB. Leave out the contract or other extras, or split the search package."; return; }
+  let all = [...files.search.map(f => ({ f, kind: "search" })), ...files.commitment.map(f => ({ f, kind: "commitment" })), ...(wantDeed ? files.contract : []).map(f => ({ f, kind: "contract" })), ...files.other.map(f => ({ f, kind: "other" }))];
+  all = await fitSize(all); if (!all) return;
   const meta = { file_no: $("#fileNo").value.trim(), state: $("#state").value, tx_type: $("#txType").value, underwriter: $("#underwriter").value, notes: $("#notes").value.trim(), reviewer_name: reviewer() };
   const q = { id: null, file_no: meta.file_no, status: "uploading", progress: "Uploading PDFs", startedAt: Date.now() };
   queue.unshift(q);
@@ -575,15 +575,25 @@ $("#form").addEventListener("submit", async (e) => {
   }
   saveQueue(); renderQueue(); ensurePolling();
 });
+/* Big packages (Caroline, Nov 20): over 25 MB, the biggest PDFs are redrawn smaller in the browser before they are sent.
+ * Returns the list to send, or null (with a message) if it still doesn't fit. The files picked stay on the form either way. */
+const SIZE_LIMIT = 25 * 1048576;
+async function fitSize(all) {
+  if (all.reduce((a, x) => a + x.f.size, 0) <= SIZE_LIMIT) return all;
+  if (!window.PdfShrink) { $("#runNote").textContent = "These files add up to more than 25 MB. Leave out extras, or split the search package."; return null; }
+  const btn = $("#run"); btn.disabled = true;
+  try { return await window.PdfShrink.fitFiles(all, SIZE_LIMIT, (m) => { $("#runNote").textContent = m + " (big files take a minute; keep this page open)"; }); }
+  catch (err) { $("#runNote").textContent = err.message + " Your files are still here."; return null; }
+  finally { btn.disabled = false; }
+}
 /* Deed only (no contract): the deed request form takes the contract's place (John, Nov 20). No title review runs. */
 async function runDeedOnly() {
   if (!window.DeedRequest) { $("#runNote").textContent = "The page didn't load fully. Refresh and try again."; return; }
   let request;
   try { request = window.DeedRequest.cleanDeedRequest(intakeValues()); }
   catch (err) { $("#runNote").textContent = err.message + " Your files and answers are still here."; return; }
-  const all = [...files.search.map(f => ({ f, kind: "search" })), ...files.other.map(f => ({ f, kind: "other" }))];
-  const total = all.reduce((a, x) => a + x.f.size, 0);
-  if (total > 25 * 1048576) { $("#runNote").textContent = "These files add up to more than 25 MB. Leave out extras or split the search package."; return; }
+  let all = [...files.search.map(f => ({ f, kind: "search" })), ...files.other.map(f => ({ f, kind: "other" }))];
+  all = await fitSize(all); if (!all) return;
   const fileNo = $("#fileNo").value.trim();
   const dq = { id: null, type: "deed", file_no: fileNo, status: "uploading", progress: "Uploading PDFs", startedAt: Date.now() };
   queue.unshift(dq);
