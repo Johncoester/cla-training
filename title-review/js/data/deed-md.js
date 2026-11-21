@@ -352,7 +352,11 @@ export function checkDeed(facts) {
   if (f.deedType === 'sale' || !f.deedType) {
     if (!(Number(f.consideration) > 0)) add('5. Taxes', 'flag', 'No sale price found. A sale deed needs the consideration from the contract (or the final price after addenda).');
     else add('5. Taxes', f.priceChangedByAddendum ? 'flag' : 'ok', f.priceChangedByAddendum ? `Price ${amountWords(f.consideration)} comes from an addendum. Confirm it is the final price.` : `Consideration: ${amountWords(f.consideration)} (contract price).`);
-  } else add('5. Taxes', 'flag', 'No-consideration deed: state the relationship and the exemption (statute and wording) in bold italics at the top. The clerk will not guess the exemption.');
+  } else {
+    const rel = clean(f.request && f.request.relationship);   // Deed only: the request form says how the people are related
+    add('5. Taxes', 'flag', rel ? `No-consideration deed: state the relationship ("${rel}", from the deed request) and the exemption (statute and wording) in bold italics at the top. The clerk will not guess the exemption.`
+      : 'No-consideration deed: state the relationship and the exemption (statute and wording) in bold italics at the top. The clerk will not guess the exemption.');
+  }
 
   // extra recorded matters that belong on the deed
   for (const x of f.flags || []) add(x.step || '7. Quality control', 'flag', clean(x.text));
@@ -401,6 +405,7 @@ export function flagTopic(text, people) {
   if (/marital status|married|marriage|spouse/i.test(t) && /\b(sellers?|grantors?)\b/i.test(t) && !/\b(buyers?|grantees?)\b/i.test(t) && !SELLER_STATUS.test(t)) return 'drop';
   if (SELLER_STATUS.test(t) && /\b(sellers?|grantors?|owners?)\b/i.test(t) && /marital|divorc/i.test(t)) return 'seller-status';
   if (/first-time/i.test(t)) return 'first-time';
+  if (/exemption|no[- ]consideration|transfer tax|recordation tax/i.test(t)) return 'exemption';
   if (/legal description|exhibit a\b/i.test(t)) return 'legal';
   if (/\btrusts?\b/i.test(t) && /\b(buyers?|grantees?)\b/i.test(t)) return 'trust-buyer';
   if (/\btenan|vesting(?! deed)|takes? title|taking title|sole owner|joint tenants|married to each other|wife and husband|husband and wife|\bgenders?\b|marital status/i.test(t)) return 'vesting';
@@ -418,10 +423,12 @@ export function tidyFlags(items, f = {}) {
   const out = []; const at = new Map();
   for (const it of items) {
     if (it.status !== 'flag') { out.push(it); continue; }
-    const topic = flagTopic(it.text, people);
+    const topic = it.step === '3. Deed type' ? null : flagTopic(it.text, people);   // the deed type stands on its own
     if (topic === 'drop') continue;
     // one person buying in their own name can only take title one way: their marital status and "how they take title" need no question
     if (topic === 'vesting' && oneBuyer && !/\badd|three|\btrust|\bllc\b|entity|company|co-?owner/i.test(it.text)) continue;
+    // how they hold title is already stated and isn't tenants by the entirety: whether they are married changes nothing (MD)
+    if (topic === 'vesting' && f.tenancySource === 'stated' && f.tenancy !== 'tbe' && /marital|married|marriage/i.test(it.text) && !/\btenan|take title|vesting(?! deed)|wife and husband|husband and wife/i.test(it.text)) continue;
     if (topic && typeof topic === 'object') {   // the same person: join the item that already names any of them
       const hit = out.find((o) => o.people && o.people.some((p) => topic.people.includes(p)));   // a person item, or the trust-buyer item naming them
       if (hit) { hit.parts.push(it.text); topic.people.forEach((p) => { if (!hit.people.includes(p)) hit.people.push(p); }); }

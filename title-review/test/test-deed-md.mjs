@@ -110,4 +110,13 @@ ok(!tru.some((x) => /Tenancy "entity" was assumed/.test(x.text)), 'a company buy
 // Cris: a gift deed has no contract, so no "not found in the contract" flags
 const gift = flagsOf({ ...tbe, deedType: 'gift', contractSellers: [], contractBuyers: [] });
 ok(!gift.some((x) => /not found in the contract/.test(x.text)), 'a gift deed is not asked for a contract');
+
+// Deed only (Nov 21): joint tenants stated on the request, so marriage changes nothing; the exemption is one item using the form's relationship
+const dOnly = flagsOf({ ...tbe, deedType: 'gift', tenancy: 'jt', tenancySource: 'stated', granteesMarried: false, contractSellers: [], contractBuyers: [], request: { relationship: 'Parents to their daughter' },
+  grantees: [{ name: 'Hamid Reza Ali Khani', kind: 'individual' }, { name: 'Elaheh Bidgoli', kind: 'individual' }, { name: 'Hadiseh Alikhani', kind: 'individual' }],
+  flags: [{ step: '2. Parties', text: 'Whether Hamid and Elaheh are married to each other is not stated. Confirm marital status of the grantees.' },
+    { step: '5. Taxes', text: 'The transfer tax and recordation tax exemption basis for a deed with no consideration is not documented. Confirm the exemption basis.' }] });
+ok(!dOnly.some((x) => /Confirm marital status of the grantees/.test(x.text)), 'joint tenants stated: no marital question');
+ok(dOnly.filter((x) => /exemption/i.test(x.text) && x.step !== '3. Deed type').length === 1 && dOnly.some((x) => /Parents to their daughter/.test(x.text)), 'the exemption is one item and uses the relationship from the request');
+ok(dOnly.some((x) => x.step === '3. Deed type' && !x.combined), 'the deed type stays its own item');
 console.log(fail ? `\n${fail} failed` : '\nall passed'); process.exit(fail ? 1 : 0);
