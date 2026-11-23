@@ -1,4 +1,4 @@
-// Course: Settlement Funding, Timing & Wire Safety — CLA procedures (draft).
+// Course: Settlement Funding, Timing & Wire Safety — CLA procedures (published Nov 23, 2026).
 // Source: CLA settlement training led by Matt Landsberg, Nov 23, 2026 (Google Meet / Gemini notes).
 (function(){
 const SECTIONS = { FU: "Buyer Funds", TM: "Timing & Same-Day Proceeds", WS: "Wire Safety" };
@@ -111,7 +111,7 @@ const QUESTIONS = [
 window.COURSES = window.COURSES || [];
 window.COURSES.push({
   id: "funding",
-  draft: true,
+  draft: false,
   title: "Settlement Funding, Timing & Wire Safety",
   subtitle: "CLA procedures · From the Nov 23 settlement training",
   description: "CLA's rules for buyer funds, accepted payment methods, missing funds, scheduling for same-day seller proceeds, and protecting wires from fraud.",
