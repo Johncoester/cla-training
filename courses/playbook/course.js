@@ -32,8 +32,7 @@ const LESSONS = [
 <p>Buyers get an email listing the accepted ways to send the deposit: a <b>bank wire</b>, a <b>check payable to "CLA Title and Escrow" submitted through our website</b>, or a check sent by <b>FedEx</b>. A wire is usually easiest. A buyer with no checkbook can use the portal link or wire.</p>
 <h4>Cash to close</h4>
 <ul>
-<li>On Maryland and DC files, <b>anything over $5,000 must be wired</b>. Smaller amounts may come by cashier's check, but cashier's checks clear slowly.</li>
-<li><b>Florida files: confirm with a manager.</b> On one Florida file, cashier's checks weren't accepted for closing at all because of counterfeit-check fraud.</li>
+<li>On every file (Maryland, DC and Florida), <b>anything over $5,000 must be wired</b>. Smaller amounts may come by cashier's check, but cashier's checks clear slowly.</li>
 <li>Wires should show the <b>file number or the buyer's (or LLC's) name</b> in the description so funding can match them. A name alone is acceptable.</li>
 <li>Buyers must wire the <b>exact cash to close</b>. The earnest money is <b>already credited</b> in that figure, so they must not subtract it again.</li>
 <li>Slow bank transfer (some banks say up to 72 hours)? Have the buyer <b>start it now</b> and send the receipt.</li>
@@ -44,7 +43,7 @@ const LESSONS = [
 "The commission is wired out <b>only after the lender's funds are in</b>.",
 "Keys aren't released until funds are confirmed, and release needs <b>approval</b>."]) + `
 <div class="ex"><b>Example:</b> Cash to close is $61,820.75. The buyer subtracts their earnest money again and wires $57,626.75. They're <b>$4,194.00 short</b> and must send the difference before closing.</div>`,
- keys:[["MD/DC cash to close over $5,000","Must be wired"],["Florida cashier's checks","Confirm with a manager"],["Wire description","File number or buyer/LLC name"],["EMD in cash to close","Already credited; don't subtract again"],["Commission paid","After lender funds arrive"]],
+ keys:[["Cash to close over $5,000 (MD, DC, FL)","Must be wired"],["Wire description","File number or buyer/LLC name"],["EMD in cash to close","Already credited; don't subtract again"],["Commission paid","After lender funds arrive"]],
  traps:["Buyers subtracting the deposit twice is the most common shortfall.","Never release keys or pay commission before funds are confirmed."],
  qs:["KQ05","KQ06","KQ07","KQ08","KQ09"]},
 
@@ -233,7 +232,7 @@ const Q = [
 ["KQ03","FW","A lender emails instructions for an outgoing payoff wire. What happens before we send it?",["Nothing, since it came from the lender","We call to verify the instructions","The buyer's agent reviews them","We mail a check instead"],1,"Every outgoing wire's instructions are verified by phone, whoever sent them."],
 ["KQ04","FW","You're calling a former owner about signing a corrective deed and they think it's a scam. What helps?",["Give them your personal cell phone number", "Back up the call with a Qualia message", "Tell them to call the county recorder", "Mail a letter and wait two weeks"],1,"A message through the official portal shows it's really CLA."],
 ["KQ05","FW","Cash to close is $61,820.75. The buyer wires $57,626.75 after subtracting their earnest money. What happened?",["The lender raised the loan amount that morning", "The deposit was already credited in cash to close", "CLA added a wire fee that wasn't disclosed", "Nothing; that's the correct way to figure it"],1,"The earnest money is already factored into cash to close."],
-["KQ06","FW","On a Maryland or DC file, which closing funds must be wired?",["Anything over $50,000","Only the earnest money","Anything over $5,000","None; personal checks are fine"],2,"Amounts over $5,000 must be wired; smaller amounts may come by cashier's check."],
+["KQ06","FW","On a Maryland, DC or Florida file, which closing funds must be wired?",["Anything over $50,000","Only the earnest money","Anything over $5,000","None; personal checks are fine"],2,"Amounts over $5,000 must be wired; smaller amounts may come by cashier's check."],
 ["KQ07","FW","What should a buyer put in the wire description?",["Leave it blank for security reasons", "The listing agent's license number", "The file number or buyer's name", "The word \"gift\" and nothing else"],2,"Funding uses the file number or name to match the wire."],
 ["KQ08","FW","When does CLA wire out the commission on a financed purchase?",["As soon as the earnest money check clears", "After the lender's loan funds have arrived", "Before the signing, so agents are paid on time", "Thirty days after the deed records"],1,"Commissions go out only after lender funds arrive."],
 ["KQ09","FW","A buyer's bank says the transfer may take up to 72 hours. What do you advise?",["Wait until the day before closing to start it", "Start it now and send us the receipt", "Bring the money in cash to closing", "Cancel it and send the funds by Zelle"],1,"Start slow transfers right away and send proof."],
