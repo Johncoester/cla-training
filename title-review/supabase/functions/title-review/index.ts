@@ -155,6 +155,17 @@ async function getRules() {
   return r ?? { version: 0, text: "" };
 }
 
+// Private underwriter guidance (from Fidelity's confidential deskbook). Read only here, added to the
+// review instructions on the server; never returned by any action and never stored in this public repo.
+async function getReference() {
+  try {
+    const [r] = await sql`select version, text from title_review.reference order by version desc limit 1`;
+    return r ?? { version: 0, text: "" };
+  } catch (_) {
+    return { version: 0, text: "" };
+  }
+}
+
 /* ---------------- the review ---------------- */
 async function runReview(id: string) {
   const setProgress = (p: string) => sql`update title_review.reviews set progress = ${p} where id = ${id}`;
@@ -183,13 +194,13 @@ async function runReview(id: string) {
       content.push({ type: "document", source: { type: "url", url: data.signedUrl }, title: clip(f.name, 200) });
     }
     if (totalBytes > 25 * 1024 * 1024) throw new Error("These files add up to more than 25 MB, too much to finish in one run. Leave out the contract or other extras, or split the search package.");
-    if (totalBytes > 30 * 1024 * 1024) throw new Error("The files add up to more than 30 MB. Remove duplicates or very large scans and try again.");
 
     const hasCommitment = files.some((f) => f.kind === "commitment");
     content.push({ type: "text", text: taskPrompt(r, hasCommitment, corrections, files.map((f) => f.name)) });
     await setProgress("Claude is reviewing the file (usually 1-4 minutes)");
 
-    const system = rules.text;
+    const reference = await getReference();
+    const system = reference.text ? `${rules.text}\n\nUNDERWRITER REFERENCE\n${reference.text}` : rules.text;
     // Use a key saved in this project if there is one; otherwise go through the relay in the
     // "test portal" project, where John saved the key on Nov 17 2026.
     const ownKey = (Deno.env.get("ANTHROPIC_API_KEY") ?? "").trim();
