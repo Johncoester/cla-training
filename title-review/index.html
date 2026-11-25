@@ -130,6 +130,14 @@ input:focus-visible, select:focus-visible, textarea:focus-visible, button:focus-
 .chip.MEDIUM { background: var(--med-soft); color: var(--med); border-color: transparent; }
 .chip.LOW { background: var(--low-soft); color: var(--low); border-color: transparent; }
 .chip.missed { background: var(--accent); color: var(--card); border-color: transparent; }
+.chip.ctc-BLOCKING { background: var(--crit-soft); color: var(--crit); border-color: transparent; }
+.chip.ctc-CONDITIONAL { background: var(--med-soft); color: var(--med); border-color: transparent; }
+.chip.ctc-NON-BLOCKING { background: var(--low-soft); color: var(--low); border-color: transparent; }
+.cura { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin: 10px 0; }
+.cura div { border: 1px solid var(--line); border-radius: 8px; padding: 6px 8px; font-size: 13px; }
+.cura b { display: block; font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+.yn-YES { color: var(--crit); font-weight: 700; } .yn-NO { color: var(--low); font-weight: 700; } .yn-VERIFY { color: var(--med); font-weight: 700; }
+@media (max-width: 560px) { .cura { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 dl.facts { display: grid; grid-template-columns: max-content 1fr; gap: 6px 14px; margin: 0; font-size: 13.5px; }
 dl.facts dt { color: var(--muted); }
 dl.facts dd { margin: 0; overflow-wrap: anywhere; }
@@ -634,7 +642,9 @@ const shortName = (n) => String(n).replace(/\.pdf$/i, "").slice(0, 28);
 function renderResults(rev, fbMap) {
   currentFiles = rev.files || []; currentFileCount = currentFiles.length;
   const r = rev.result || {}, s = r.summary || {};
-  const findings = [...(r.findings || [])].sort((a, b) => (PRI_ORDER[a.priority] ?? 9) - (PRI_ORDER[b.priority] ?? 9));
+  const CTC_ORDER = { BLOCKING: 0, CONDITIONAL: 1, "NON-BLOCKING": 2 };
+  const findings = [...(r.findings || [])].sort((a, b) => ((CTC_ORDER[a.ctc] ?? 1) - (CTC_ORDER[b.ctc] ?? 1)) || ((PRI_ORDER[a.priority] ?? 9) - (PRI_ORDER[b.priority] ?? 9)));
+  const ctcCount = (c) => findings.filter(f => f.ctc === c).length;
   const missed = findings.filter(f => f.team_missed);
   const count = (p) => findings.filter(f => f.priority === p).length;
   const cost = rev.usage?.est_cost_usd;
@@ -647,6 +657,7 @@ function renderResults(rev, fbMap) {
         <span class="head">${esc(s.headline || "")}</span>
         <div class="counts">
           ${missed.length ? `<span class="chip missed">Team missed: ${missed.length}</span>` : ""}
+          ${["BLOCKING", "CONDITIONAL", "NON-BLOCKING"].map(c => ctcCount(c) ? `<span class="chip ctc-${c}">${ctcCount(c)} ${c.toLowerCase()}</span>` : "").join("")}
           ${["CRITICAL", "HIGH", "MEDIUM", "LOW"].map(p => count(p) ? `<span class="chip ${p}">${count(p)} ${p.toLowerCase()}</span>` : "").join("")}
         </div>
       </div>
@@ -657,7 +668,7 @@ function renderResults(rev, fbMap) {
         <dt>Seller / Buyer</dt><dd>${esc(s.seller)} → ${esc(s.buyer)}</dd>
         <dt>Lender</dt><dd>${esc(s.lender)}</dd>
         <dt>Through date</dt><dd>${esc(s.through_date)}${s.commitment_date ? " · Commitment " + esc(s.commitment_date) : ""}</dd>
-        <dt>Open liens</dt><dd>${esc(s.open_mortgages)} mortgage(s), ${esc(s.judgments_liens)} judgment(s)/lien(s)</dd>
+        <dt>Counts</dt><dd>${esc(s.open_mortgages)} open mortgage(s)/DOT(s)${s.udots != null ? ", " + esc(s.udots) + " UDOT(s)" : ""}, ${esc(s.judgments_liens)} judgment(s)/lien(s)</dd>
       </dl>
     </div>
 
@@ -666,6 +677,18 @@ function renderResults(rev, fbMap) {
 
     <div class="section-title"><h2>All findings</h2><span class="note">Mark each one so the AI learns: Correct, Wrong, or Not needed.</span></div>
     <div class="list">${findings.filter(f => !f.team_missed).map(f => findingHtml(f, fbMap)).join("") || '<p class="note">No other findings.</p>'}</div>
+
+    ${(r.outstanding || []).filter(Boolean).length ? `<div class="card"><h2>Outstanding before clear to close</h2><ol class="qs">${r.outstanding.filter(Boolean).map(q => `<li>${esc(q)}</li>`).join("")}</ol></div>` : ""}
+
+    ${(r.search_status || []).length ? `<div class="card"><h2>Search status</h2>
+      <div class="tablewrap"><table><thead><tr><th>Search</th><th>Status</th><th>Note</th></tr></thead><tbody>
+      ${r.search_status.map(x => `<tr><td>${esc(x.search)}</td><td><b>${esc(x.status)}</b></td><td>${esc(x.note)}</td></tr>`).join("")}
+      </tbody></table></div></div>` : ""}
+
+    ${(r.no_curative || []).length ? `<div class="card"><h2>No further curative needed</h2>
+      <div class="tablewrap"><table><thead><tr><th>Item</th><th>Why</th></tr></thead><tbody>
+      ${r.no_curative.map(x => `<tr><td>${esc(x.item)}</td><td>${esc(x.reason)}</td></tr>`).join("")}
+      </tbody></table></div></div>` : ""}
 
     <div class="card">
       <h2>The AI missed something?</h2>
@@ -725,14 +748,22 @@ function findingHtml(f, fbMap) {
   return `<article class="finding ${esc(f.priority)}" data-id="${esc(f.id)}" data-title="${esc(f.title)}" data-cat="${esc(f.category)}" data-pri="${esc(f.priority)}">
     <div class="meta">
       <span class="chip ${esc(f.priority)}">${esc(f.priority)}</span>
+      ${f.ctc ? `<span class="chip ctc-${esc(f.ctc)}">${esc(f.ctc)}</span>` : ""}
+      ${f.classification ? `<span class="chip">${esc(f.classification)}</span>` : ""}
       <span class="chip">${esc(f.category)}</span>
       ${f.team_missed ? '<span class="chip missed">Team missed</span>' : ""}
       ${f.underwriter_review ? '<span class="chip">Underwriter review</span>' : ""}
       ${f.confidence && f.confidence !== "high" ? `<span class="chip">${esc(f.confidence)} confidence</span>` : ""}
     </div>
     <h3>${esc(f.title)}</h3>
+    ${f.lien || f.payoff || f.release || f.who ? `<div class="cura">
+      <div><b>Who</b>${esc(f.who || "")}</div>
+      <div><b>Lien</b><span class="yn-${esc(f.lien || "")}">${esc(f.lien || "")}</span></div>
+      <div><b>Payoff</b><span class="yn-${esc(f.payoff || "")}">${esc(f.payoff || "")}</span></div>
+      <div><b>Release</b><span class="yn-${esc(f.release || "")}">${esc(f.release || "")}</span></div>
+    </div>` : ""}
     <div class="rows">
-      ${row("Recording ref", f.recording_ref)}${row("Parties", f.parties)}${row("Issue", f.issue)}${row("Why it matters", f.concern)}
+      ${row("Recording ref", f.recording_ref)}${row("Parties", f.parties)}${row("Issue", f.issue)}${row("Reasoning", f.reasoning)}${row("Why it matters", f.concern)}
       ${row("Documents needed", f.documents_required)}${row("Action", f.action)}${row("Source", f.source)}
     </div>
     ${(f.pages || []).filter(p => p && p.page).length ? `<div class="pagebtns">${f.pages.filter(p => p && p.page).slice(0, 6).map(p => `<button type="button" class="pagebtn" data-file="${esc(p.file || "")}" data-page="${esc(p.page)}">Show page ${esc(p.page)}${(currentFileCount > 1 && p.file) ? " · " + esc(shortName(p.file)) : ""}</button>`).join("")}</div>` : ""}

@@ -256,16 +256,20 @@ ${r.notes ? "Notes from the team: " + r.notes : ""}
 ${hasCommitment ? "A draft commitment is included. Compare it line by line with the search and set team_missed true for anything the commitment gets wrong or leaves out." : "No draft commitment was uploaded. Review the search only; team_missed is false for every finding."}
 Cite recording references (liber/folio or instrument) for every finding. For "pages", give the exact file name (one of: ${fileNames.map((n) => `"${n}"`).join(", ")}) and the PDF page number (1 = first page of that PDF file, counting every page, not the page number printed on the paper) where the evidence is. Do not invent facts that are not in the documents; if something needed is missing from the package, make that a finding (category Search Quality). Never include SSNs or account numbers.
 
+Follow section N (curative analysis) for every finding: real title impact only; VERIFY when the records don't settle it; things that need nothing go in no_curative, not in findings.
 KEEP IT TIGHT: at most 15 findings, merge related items, and keep every text field under 300 characters (qualia_note under 1500). Write the JSON on as few lines as possible, with no indentation.
 
 Reply with ONLY one JSON object, no other text, in this shape:
-{"summary":{"property":"","county":"","vesting":"","vesting_deed":"","seller":"","buyer":"","lender":"","through_date":"","commitment_date":"","open_mortgages":0,"judgments_liens":0,"overall":"ready|curative_needed|escalate","headline":"one plain sentence on the state of title"},
-"findings":[{"id":"F1","priority":"CRITICAL|HIGH|MEDIUM|LOW","category":"","title":"","recording_ref":"","parties":"","issue":"","concern":"","documents_required":"","action":"","underwriter_review":false,"team_missed":false,"source":"short description, e.g. Search package p.4","pages":[{"file":"exact file name","page":4}],"confidence":"high|medium|low"}],
+{"summary":{"property":"","county":"","vesting":"","vesting_deed":"","seller":"","buyer":"","lender":"","through_date":"","commitment_date":"","open_mortgages":0,"udots":0,"judgments_liens":0,"overall":"ready|curative_needed|escalate","headline":"one plain sentence on the state of title"},
+"findings":[{"id":"F1","priority":"CRITICAL|HIGH|MEDIUM|LOW","category":"","classification":"REQUIRED PAYOFF|REQUIRED RELEASE|POTENTIAL LIEN|OWNERSHIP/CURATIVE|COMMITMENT CORRECTION|TAX/SETTLEMENT|UNDERWRITER REVIEW|ADMINISTRATIVE ONLY|NOT NEEDED","who":"Seller|Buyer|Prior Owner|Property|Other","lien":"YES|NO|VERIFY","payoff":"YES|NO|VERIFY","release":"YES|NO|VERIFY","ctc":"BLOCKING|CONDITIONAL|NON-BLOCKING","reasoning":"why, from the records","title":"","recording_ref":"","parties":"","issue":"","concern":"","documents_required":"","action":"","underwriter_review":false,"team_missed":false,"source":"short description, e.g. Search package p.4","pages":[{"file":"exact file name","page":4}],"confidence":"high|medium|low"}],
 "commitment_check":[{"item":"","status":"ok|issue|missing","note":""}],
+"search_status":[{"search":"e.g. Bankruptcy - Seller","status":"COMPLETED|PENDING|NOT ORDERED|NEGATIVE|N/A","note":""}],
+"outstanding":["each item still to be cleared before CTC, with BLOCKING or CONDITIONAL"],
+"no_curative":[{"item":"","reason":""}],
 "questions":[""],
 "qualia_note":"",
 "qualia_tasks":[""]}
-Order findings CRITICAL first. commitment_check is [] if no commitment was uploaded.`;
+Order findings BLOCKING first, then CONDITIONAL, then NON-BLOCKING; within each, CRITICAL first. commitment_check is [] if no commitment was uploaded.`;
 }
 
 // Reads an Anthropic streaming (SSE) response into {text, usage, stop_reason, model}.
