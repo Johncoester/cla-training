@@ -28,7 +28,8 @@ const CORS = {
 };
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { ...CORS, "Content-Type": "application/json" } });
-const clip = (s: unknown, n: number) => String(s ?? "").slice(0, n);
+// Strips the null characters some PDFs (e.g. Qualia's) leave where ligatures like "tt" dropped out; Postgres rejects them.
+const clip = (s: unknown, n: number) => String(s ?? "").replace(/\u0000/g, "").slice(0, n);
 
 const CTX = `You help staff at C.L.A. Title & Escrow (a title and escrow company in Maryland, DC and Virginia) explain closing documents over the phone to buyers, sellers and borrowers. Notaries at the table only witness signatures, so staff need clear, accurate, plain-English explanations (8th-grade reading level).
 Your job is to EXPLAIN the documents exactly as written, not to check them. Assume every document and number is correct. Never call anything an error, a mistake, missing, blank or wrong, and never suggest corrections.
@@ -233,8 +234,9 @@ async function askText(model: string, prompt: string, maxTokens: number, images:
   return t;
 }
 async function askJson(model: string, prompt: string, maxTokens: number, images: any[] = [], effort?: string, ctx?: any) {
-  const t = await callClaude(model, prompt, maxTokens, images, effort, ctx);
-  const r = parseJson(t);
+  let r = parseJson(await callClaude(model, prompt, maxTokens, images, effort, ctx));
+  // One automatic retry if the answer wasn't readable JSON (happened on 2 of 26 pages, Nov 26 2026).
+  if (!r) r = parseJson(await callClaude(model, prompt + "\n\nReply with ONLY the JSON object, nothing else.", maxTokens, images, effort, ctx));
   if (!r) throw new Error("The explanation came back unreadable. Try again.");
   return r;
 }

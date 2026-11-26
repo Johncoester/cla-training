@@ -267,9 +267,9 @@ function toLines(items,vp,boxes){
     if(!it.str||!it.str.trim())continue;
     const t=lib.Util.transform(vp.transform,it.transform);
     const h=Math.hypot(t[2],t[3])||10,x=t[4],y=t[5]-h,w=(it.width||0)*vp.scale;
-    let str=it.str;
+    let str=it.str.replace(/\u0000/g,'');
     for(const re of talks?[SSN_DASH,SSN_BARE]:[SSN_DASH]){
-      str=str.replace(re,(m,off)=>{const L=it.str.length||1;boxes.push({x:x+w*off/L-2,y:y-2,w:w*m.length/L+4,h:h*1.35+4});return'XXX-XX-XXXX'});
+      str=str.replace(re,(m,off)=>{const L=str.length||1;boxes.push({x:x+w*off/L-2,y:y-2,w:w*m.length/L+4,h:h*1.35+4});return'XXX-XX-XXXX'});
     }
     segs.push({x,y,w,h,s:str});
   }
