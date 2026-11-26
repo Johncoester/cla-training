@@ -38,3 +38,6 @@ A separate tool for the title team at **https://training.clatitle.com/title-revi
 - The page uploads PDFs to the private Supabase bucket `title-review` and calls the edge function `title-review` (project CLA Training).
 - The edge function sends the PDFs to the Claude API (key stored as the Supabase secret `ANTHROPIC_API_KEY`) with CLA's rule pack from `title_review.rules`, and saves results and team feedback in schema `title_review` (not reachable from the browser).
 - No client documents are stored in this repo.
+
+## Closing Package Explainer (`/closing-explainer/`)
+A separate tool at **https://training.clatitle.com/closing-explainer/** that explains every page of a closing package in plain English for buyer or seller calls. The PDF stays in the browser; page text goes to the edge function `closing-explainer` (project CLA Training), which calls Claude. Nothing is stored. It can go in the portal as is (`?embed=1`). See `closing-explainer/README.md`.

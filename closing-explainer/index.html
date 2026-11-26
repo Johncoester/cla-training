@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CLA Closing Package Explainer</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,600&display=swap" rel="stylesheet">
+<style>
+/* VOICE: calm, clear desk tool for staff on a live phone call; plain words, no clutter.
+   IDEA: an annotated document plate — the real page, with leader lines to plain-English notes.
+   PICTURE: the uploaded page itself, with clickable highlighted lines; on the upload screen, a drawn page with callouts.
+   COLOUR and TYPE: white ground, ink #10131a, prussian #0b4f8a for explained lines, carmine #c1121f for the selected one; Literata throughout.
+   LAYOUT: toolbar, then page left and explanation panel right; stacks page-then-panel under 820px. */
+:root{color-scheme:light dark;--bg:light-dark(#f5f7f9,#11161c);--paper:light-dark(#fff,#19212a);--ink:light-dark(#1d2733,#e3e9ef);--mute:light-dark(#5d6b7a,#9aa8b6);--line:light-dark(#d9e0e7,#2c3743);--card:light-dark(#f5f7f9,#11161c);--pru:light-dark(#1f5a8a,#7db4e3);--pruT:light-dark(#e4eef7,#1d3247);--car:light-dark(#b3261e,#ff8a80);--carT:light-dark(#fbe9e7,#3a1c1a);--fd:"Source Serif 4",Georgia,serif;--fb:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif}
+:root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
+*{box-sizing:border-box;min-width:0}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.55 var(--fb);overflow-x:clip}
+header{background:var(--paper);color:var(--ink);border-bottom:1px solid var(--line);padding:14px max(4vw,16px);display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center}
+header h1{font:600 24px/1.2 var(--fd);margin:0}
+header .co{font-size:13px;color:var(--mute)}
+header .sp{flex:1}
+button,select,input,textarea{font:inherit;font-size:16px;color:inherit}
+.btn{min-height:44px;padding:8px 16px;border-radius:8px;border:1px solid var(--line);background:var(--card);cursor:pointer}
+.btn.pri{background:var(--pru);border-color:var(--pru);color:light-dark(#fff,#0f1217);font-weight:600}
+header .btn{background:var(--paper)}
+.up h2,.panel h2,.sum h2{font-family:var(--fd);font-weight:600}
+#stage,.it,.mail textarea,.mail input{background-color:var(--paper)}
+.btn:focus-visible,select:focus-visible,input:focus-visible,textarea:focus-visible,.ln:focus-visible,.it:focus-visible{outline:3px solid var(--car);outline-offset:2px}
+.btn:disabled{opacity:.5;cursor:default}
+[hidden]{display:none!important}
+.band{padding:clamp(24px,4vw,56px) max(4vw,16px)}
+/* upload */
+.up{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr);gap:clamp(20px,4vw,56px);align-items:center;max-width:1240px;margin:0 auto}
+.up h2{font-size:clamp(30px,4.4vw,46px);line-height:1.05;margin:0 0 14px;text-wrap:balance}
+.up p{max-width:60ch;margin:0 0 14px}
+.drop{border:2px dashed var(--pru);border-radius:14px;padding:22px;text-align:center;background:var(--card);margin:18px 0 12px;cursor:pointer}
+.drop.ov{background:var(--pruT)}
+.drop b{display:block;font-size:19px;margin-bottom:4px}
+.small{font-size:14px;color:var(--mute)}
+.fig svg{width:100%;height:auto;display:block}
+/* viewer */
+.bar{display:flex;flex-wrap:wrap;gap:8px 10px;align-items:center;padding:10px max(2vw,12px);border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--bg);z-index:5}
+.bar select{min-height:44px;border:1px solid var(--line);border-radius:8px;background:var(--card);padding:6px 10px;max-width:min(520px,100%);flex:1 1 240px}
+.pg{white-space:nowrap;font-size:15px}
+.seg{display:flex;flex-wrap:wrap;align-items:center;gap:0;flex:0 1 auto}
+.segl{font-size:14px;color:var(--mute);margin-right:8px;white-space:nowrap}
+.seg .btn{border-radius:0;margin-left:-1px;padding:8px 12px;white-space:nowrap}
+.seg .btn:nth-child(2){border-radius:8px 0 0 8px;margin-left:0}.seg .btn:last-child{border-radius:0 8px 8px 0}
+.seg .btn[aria-checked=true]{background:var(--pru);border-color:var(--pru);color:light-dark(#fff,#0f1217);font-weight:600;position:relative}
+.chip{display:inline-block;font-size:13px;padding:2px 10px;border-radius:99px;background:var(--pruT);color:var(--pru);font-weight:600;margin-bottom:6px}
+.mail{border:1px solid var(--line);border-radius:10px;padding:14px;margin:14px 0;background:var(--card)}
+.mail h3{margin:0 0 10px;font-size:18px}
+.mail textarea{min-height:380px;font:15px/1.5 var(--fb);background:var(--bg)}
+.mail input{background:var(--bg)}
+#status{font-size:14px;color:var(--mute);flex:1 1 200px}
+.main{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:20px;padding:16px max(2vw,12px);max-width:1500px;margin:0 auto}
+#stage{position:relative;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.15),0 8px 28px rgba(0,0,0,.12);border-radius:4px;align-self:start}
+#cv{display:block;width:100%}
+#ov{position:absolute;inset:0}
+.ln{position:absolute;border:0;padding:0;background:transparent;cursor:pointer;border-radius:3px}
+.ln:hover{background:rgba(11,79,138,.08)}
+.ln.hit{background:rgba(11,79,138,.14);box-shadow:inset 3px 0 0 #0b4f8a}
+.ln.on{background:rgba(193,18,31,.2);box-shadow:inset 3px 0 0 #c1121f}
+.panel{align-self:start;position:sticky;top:76px;max-height:calc(100vh - 92px);overflow:auto;padding-right:4px}
+.panel h2{font-size:22px;line-height:1.15;margin:0 0 4px}
+.panel h3{font-size:16px;margin:20px 0 8px}
+.lead{margin:8px 0}
+.sign{border-left:3px solid var(--pru);padding:6px 12px;background:var(--card);border-radius:0 8px 8px 0;margin:10px 0}
+.it{display:flex;flex-wrap:wrap;gap:4px 10px;align-items:baseline;width:100%;text-align:left;min-height:44px;padding:10px 12px;margin:0 0 6px;border:1px solid var(--line);border-radius:8px;background:var(--bg);cursor:pointer;font-size:16px}
+.it .lab{flex:1 1 160px;font-weight:600}
+.it .amt{white-space:nowrap;font-variant-numeric:tabular-nums}
+.it .who{font-size:13px;color:var(--mute);white-space:nowrap}
+.it.on{border-color:var(--car);background:var(--carT)}
+.det{padding:4px 12px 10px;margin:-4px 0 8px}
+.det p{margin:6px 0}
+.tip{color:var(--pru)}
+.tap{border:1px solid var(--car);border-radius:8px;padding:10px 12px;margin:10px 0}
+.tap q{display:block;font-size:14px;color:var(--mute);margin-bottom:6px}
+details{border-top:1px solid var(--line);padding:8px 0}
+summary{cursor:pointer;min-height:32px;font-weight:600}
+.ask{border-top:2px solid var(--ink);margin-top:20px;padding-top:12px}
+textarea,input[type=text],.ask select{width:100%;border:1px solid var(--line);border-radius:8px;background:var(--card);padding:10px}
+.row{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0}
+.out{white-space:pre-wrap;margin:10px 0}
+.spin{display:inline-block;width:14px;height:14px;border:2px solid var(--pru);border-right-color:transparent;border-radius:50%;animation:r .8s linear infinite;vertical-align:-2px;margin-right:6px}
+@keyframes r{to{transform:rotate(360deg)}}
+@media(prefers-reduced-motion:reduce){.spin{animation:none}}
+/* summary */
+.sum{max-width:900px;margin:0 auto}
+.sum h2{font-size:clamp(28px,4vw,40px);line-height:1.05;margin:0 0 10px}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+label{display:block;font-size:14px;font-weight:600;margin-bottom:4px}
+#sBody{min-height:420px;font:15px/1.5 var(--fb)}
+.note{font-size:14px;color:var(--mute)}
+html.embed header>div:first-child{display:none}html.embed header{padding:8px 12px}
+@media(max-width:820px){.main{grid-template-columns:minmax(0,1fr)}.panel{position:static;max-height:none}.up{grid-template-columns:minmax(0,1fr)}.fig{order:-1;max-width:460px}}
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+</head>
+<body>
+<script>/* Portal embed: open as index.html?embed=1 inside the portal (iframe or link) to hide this page's own header. */try{if(/[?&]embed=1/.test(location.search))document.documentElement.classList.add('embed')}catch(e){}</script>
+<header>
+  <div><h1>CLA Closing Package Explainer</h1><div class="co">Upload a closing package. Claude explains every page in plain English so you can walk the signer through it.</div></div>
+  <span class="sp"></span>
+  <button class="btn" id="bNew" hidden>New package</button>
+  <button class="btn" id="bAll" hidden>Explain whole package</button>
+  <button class="btn" id="bSum" hidden>Buyer summary</button>
+</header>
+
+<section id="vUp" class="band">
+  <div class="up">
+    <div>
+      <h2>Know what's on every page before the signer asks</h2>
+      <p>Upload the closing package. Each document gets sorted out and explained in plain English. Tap any line, like the settlement fee or the tax prorations, to see what it means, who pays it and how to say it on the phone.</p>
+      <div class="drop" id="drop" tabindex="0" role="button" aria-label="Upload closing package PDF">
+        <b>Drop the closing package PDF here</b>
+        <span class="small">or tap to choose a file</span>
+      </div>
+      <input type="file" id="file" accept="application/pdf,.pdf" hidden>
+      <div class="row"><button class="btn" id="bDemo">Try a sample package</button></div>
+      <p class="small">The PDF is not saved anywhere. Page text is sent to Claude only to explain it. Explanations are for understanding the documents, not legal advice; send legal or tax questions to the closer or an attorney.</p>
+      <p class="small" id="noai" hidden></p>
+    </div>
+    <div class="fig" aria-hidden="true">
+      <svg viewBox="0 0 560 400">
+        <defs><linearGradient id="pg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#eef2f7"/></linearGradient></defs>
+        <rect x="34" y="30" width="250" height="340" rx="4" fill="#0b4f8a" opacity=".12" transform="translate(8 10)"/>
+        <rect x="34" y="30" width="250" height="340" rx="4" fill="url(#pg)" stroke="#c9d1dc"/>
+        <rect x="54" y="52" width="150" height="10" rx="2" fill="#10131a" opacity=".75"/>
+        <g fill="#10131a" opacity=".18" id="rows">
+          <rect x="54" y="82" width="200" height="6"/><rect x="54" y="98" width="180" height="6"/><rect x="54" y="114" width="205" height="6"/>
+          <rect x="54" y="170" width="190" height="6"/><rect x="54" y="186" width="160" height="6"/><rect x="54" y="202" width="200" height="6"/>
+          <rect x="54" y="258" width="170" height="6"/><rect x="54" y="274" width="198" height="6"/><rect x="54" y="290" width="150" height="6"/><rect x="54" y="340" width="120" height="6"/>
+        </g>
+        <rect x="48" y="134" width="216" height="18" rx="3" fill="#0b4f8a" opacity=".18"/><rect x="48" y="134" width="3" height="18" fill="#0b4f8a"/><rect x="58" y="140" width="110" height="6" fill="#0b4f8a" opacity=".7"/><rect x="214" y="140" width="40" height="6" fill="#0b4f8a" opacity=".7"/>
+        <rect x="48" y="222" width="216" height="18" rx="3" fill="#c1121f" opacity=".2"/><rect x="48" y="222" width="3" height="18" fill="#c1121f"/><rect x="58" y="228" width="130" height="6" fill="#c1121f" opacity=".75"/><rect x="214" y="228" width="40" height="6" fill="#c1121f" opacity=".75"/>
+        <rect x="48" y="308" width="216" height="18" rx="3" fill="#0b4f8a" opacity=".18"/><rect x="48" y="308" width="3" height="18" fill="#0b4f8a"/><rect x="58" y="314" width="90" height="6" fill="#0b4f8a" opacity=".7"/><rect x="204" y="314" width="50" height="6" fill="#0b4f8a" opacity=".7"/>
+        <g fill="none" stroke-width="1.5"><path d="M264 143 H330 L350 90 H372" stroke="#0b4f8a"/><path d="M264 231 H372" stroke="#c1121f"/><path d="M264 317 H330 L350 350 H372" stroke="#0b4f8a"/></g>
+        <g font-family="IBM Plex Sans, sans-serif" fill="currentColor">
+          <text x="380" y="86" font-size="17" font-weight="700" fill="#0b4f8a">Settlement fee</text><text x="380" y="106" font-size="13" opacity=".75">Pays the title company</text><text x="380" y="122" font-size="13" opacity=".75">to run the closing</text>
+          <text x="380" y="227" font-size="17" font-weight="700" fill="#c1121f">Tax proration</text><text x="380" y="247" font-size="13" opacity=".75">Paying back the seller</text><text x="380" y="263" font-size="13" opacity=".75">for taxes already paid</text>
+          <text x="380" y="346" font-size="17" font-weight="700" fill="#0b4f8a">Cash to close</text><text x="380" y="366" font-size="13" opacity=".75">What to wire before</text><text x="380" y="382" font-size="13" opacity=".75">the signing</text>
+        </g>
+      </svg>
+    </div>
+  </div>
+</section>
+
+<section id="vWork" class="band" hidden><p><span class="spin"></span><span id="wMsg">Reading the package…</span></p></section>
+
+<section id="vView" hidden>
+  <div class="bar">
+    <div class="seg" role="radiogroup" aria-label="Explaining for">
+      <span class="segl">Explaining for</span>
+      <button class="btn" role="radio" data-side="buyer">Buyer side</button>
+      <button class="btn" role="radio" data-side="seller">Seller side</button>
+      <button class="btn" role="radio" data-side="both">Both</button>
+    </div>
+    <select id="docSel" aria-label="Document"></select>
+    <button class="btn" id="bPrev" aria-label="Previous page">‹</button>
+    <span class="pg" id="pgNum"></span>
+    <button class="btn" id="bNext" aria-label="Next page">›</button>
+    <span id="status"></span>
+  </div>
+  <div class="main">
+    <div id="stage"><canvas id="cv"></canvas><div id="ov"></div></div>
+    <aside class="panel">
+      <div id="pinfo"></div>
+      <div class="ask">
+        <h3 style="margin-top:0">Caller has a question?</h3>
+        <textarea id="q" rows="2" placeholder="e.g. Why am I paying the seller's taxes?"></textarea>
+        <div class="row"><button class="btn pri" id="bAsk">Get an answer</button><button class="btn" id="bStop" hidden>Stop</button></div>
+        <div class="out" id="aOut" aria-live="polite"></div>
+      </div>
+    </aside>
+  </div>
+</section>
+
+<section id="vSum" class="band" hidden>
+  <div class="sum">
+    <div class="row"><button class="btn" id="bBack">‹ Back to the package</button></div>
+    <h2>Summary for the signers</h2>
+    <p class="note">Writes a plain-English email from the Closing Disclosure (or settlement statement) in this package. Review it before sending.</p>
+    <div class="grid2">
+      <div><label for="sFor">Write for</label><select id="sFor" class="btn" style="width:100%"><option value="buyer">Buyer side only</option><option value="seller">Seller side only</option><option value="both">Both (two separate emails)</option></select></div>
+      <div id="wB"><label for="sBuyer">Buyer / borrower names</label><input type="text" id="sBuyer" placeholder="Jordan and Casey"></div>
+      <div id="wS"><label for="sSeller">Seller names</label><input type="text" id="sSeller" placeholder="Morgan"></div>
+      <div><label for="sWhen">Closing time</label><input type="text" id="sWhen" placeholder="today at 2:00 PM"></div>
+      <div><label for="sFrom">From (your name)</label><input type="text" id="sFrom" placeholder="Your name"></div>
+    </div>
+    <div class="row"><button class="btn pri" id="bWrite">Write the summary</button><span class="note" id="sMsg"></span></div>
+    <div id="sOut"></div>
+  </div>
+</section>
+
+<script>
+{
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const DAY=86400000;
+const CTX_UNUSED='You help staff at C.L.A. Title & Escrow (a title and escrow company in Maryland, DC and Virginia) explain closing documents over the phone to buyers, sellers and borrowers. Notaries at the table only witness signatures, so staff need clear, accurate, plain-English explanations (8th-grade reading level). Never give legal or tax advice; say to ask the closer, lender or an attorney when needed. Use only figures that appear in the documents; never invent numbers. Your job is to explain the documents exactly as written, not to check them: assume they are correct, and never call anything an error, missing, blank or wrong. Skip shipping labels, cover sheets and fax pages.\n\n';
+const CFG={url:"https://upkrpewcsvfltqwmxmjs.supabase.co",key:"sb_publishable_L1f8ADmFXkPqsSGvLMibDA_6uah2q6v"};
+const FN=CFG.url+"/functions/v1/closing-explainer";
+async function api(action,data={},signal){
+  let r;try{r=await fetch(FN,{method:'POST',headers:{'Content-Type':'application/json',apikey:CFG.key},body:JSON.stringify({action,...data}),signal})}
+  catch(e){if(e?.name==='AbortError')throw{code:'cancelled'};throw{message:"Couldn't reach the explainer service. Check your internet and try again."}}
+  let out={};try{out=await r.json()}catch{}
+  if(!r.ok||out.error)throw{message:out.error||'The explainer service did not answer. Wait a moment and try again.'};
+  return out;
+}
+const sample=true,imgMax=4;let task=null,ctl=null;
+const st={pdf:null,file:'',pages:[],docs:[],cur:0,sel:null,tap:null,busy:false,stop:false,side:'both'};
+try{const v=localStorage.getItem('cla-side');if(['buyer','seller','both'].includes(v))st.side=v}catch{}
+const SIDE_NAME={buyer:'Buyer side',seller:'Seller side',both:'Buyer and seller'};
+const SIDE={
+  buyer:'SIDE: Explain for the BUYER / BORROWER only. Include only what the buyer or borrower pays, receives, owes or signs (Borrower-Paid columns, the Borrower\'s Transaction, loan terms, escrow, prepaids, cash to close). Leave out seller-only lines such as the seller\'s commission, payoff or cash to seller. If this page is only for the seller, say so in the summary and return no items.\n\n',
+  seller:'SIDE: Explain for the SELLER only. Include only what the seller pays, receives or signs (Seller-Paid columns, the Seller\'s Transaction, mortgage payoffs, commissions, seller credits, tax prorations, transfer taxes the seller pays, cash to seller). Leave out lines that only concern the buyer or their loan. If this page is only for the buyer or borrower (such as the Note or loan disclosures), say so in the summary and return no items.\n\n',
+  both:'SIDE: Explain for both buyer and seller. For every item, paidBy says who pays or receives it.\n\n'};
+const sideP=()=>SIDE[st.side];
+function paintSide(){document.querySelectorAll('[data-side]').forEach(b=>b.setAttribute('aria-checked',String(b.dataset.side===st.side)))}
+paintSide();
+document.querySelector('.seg').addEventListener('click',e=>{
+  const b=e.target.closest('[data-side]');if(!b||b.dataset.side===st.side)return;
+  st.side=b.dataset.side;try{localStorage.setItem('cla-side',st.side)}catch{}
+  paintSide();st.stop=true;
+  for(const p of st.pages)if(p.state!=='busy'){p.an=null;p.state='';p.map={}}
+  say('');if(st.pdf)go(st.cur);
+});
+const lib=window.pdfjsLib;
+if(lib)lib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+
+function errMsg(e){if(e?.message)return e.message;return({not_granted:"Claude wasn't allowed for this page.",sampling_disabled:"Claude isn't available on this account.",rate_limited:'Too many requests right now. Wait a minute and try again.',session_expired:'Please sign in to Claude again.',refused:"Claude couldn't explain this one.",invalid_json:'The answer came back garbled. Try again.',prompt_too_large:'Too much text to send at once.',image_rejected:"This page image couldn't be read."})[e?.code]||'Something went wrong. Try again.'}
+function show(v){for(const id of['vUp','vWork','vView','vSum'])$('#'+id).hidden=id!==v;const inPkg=v==='vView'||v==='vSum';$('#bNew').hidden=!inPkg;$('#bAll').hidden=v!=='vView'||!sample;$('#bSum').hidden=v!=='vView'||!sample}
+const say=t=>{$('#status').textContent=t};
+
+/* ---------- reading the PDF ---------- */
+function toLines(items,vp){
+  const segs=[];
+  for(const it of items){
+    if(!it.str||!it.str.trim())continue;
+    const t=lib.Util.transform(vp.transform,it.transform);
+    const h=Math.hypot(t[2],t[3])||10;
+    segs.push({x:t[4],y:t[5]-h,w:(it.width||0)*vp.scale,h,s:it.str});
+  }
+  segs.sort((a,b)=>a.y-b.y||a.x-b.x);
+  const rows=[];
+  for(const g of segs){
+    const r=rows.slice(-4).find(r=>Math.abs(r.y-g.y)<Math.min(r.h,g.h)*.55);
+    if(r){r.segs.push(g);r.h=Math.max(r.h,g.h)}else rows.push({y:g.y,h:g.h,segs:[g]});
+  }
+  return rows.map((r,i)=>{
+    r.segs.sort((a,b)=>a.x-b.x);
+    let t='',x0=1e9,x1=0,end=-1e9;
+    for(const g of r.segs){t+=(t&&g.x-end>1?' ':'')+g.s;end=g.x+g.w;x0=Math.min(x0,g.x);x1=Math.max(x1,g.x+g.w)}
+    return{i:i+1,t:t.replace(/\s+/g,' ').trim(),x:x0/vp.width,y:(r.y-r.h*.15)/vp.height,w:Math.max(x1-x0,8)/vp.width,h:r.h*1.3/vp.height};
+  }).filter(l=>l.t);
+}
+async function openPdf(data,name){
+  if(!lib){$('#wMsg').textContent='The PDF reader failed to load. Reload the page.';show('vWork');return}
+  show('vWork');$('#wMsg').textContent='Reading the package…';
+  try{
+    const pdf=await lib.getDocument({data}).promise;
+    Object.assign(st,{pdf,file:name,pages:[],docs:[],cur:0,sel:null,tap:null});
+    for(let n=1;n<=pdf.numPages;n++){
+      $('#wMsg').textContent=`Reading page ${n} of ${pdf.numPages}…`;
+      const pg=await pdf.getPage(n),vp=pg.getViewport({scale:1}),tc=await pg.getTextContent();
+      st.pages.push({n,lines:toLines(tc.items,vp),an:null,doc:0,state:'',map:{}});
+    }
+    await indexDocs();
+  }catch(e){show('vUp');alertBox("That file couldn't be opened as a PDF.");return}
+  show('vView');go(0);
+}
+function alertBox(t){const p=$('#noai');p.hidden=false;p.textContent=t}
+const pageText=(p,max=9000)=>p.lines.map(l=>l.i+'| '+l.t).join('\n').slice(0,max);
+
+async function indexDocs(){
+  const P=st.pages,has=P.some(p=>p.lines.length);
+  const one=n=>{st.docs=[{name:n,type:'other',start:1,end:P.length,purpose:''}];P.forEach(p=>p.doc=0)};
+  if(!has)return one('Scanned pages');
+  if(!sample)return one('Closing package');
+  const pick=new Array(P.length).fill(null);
+  try{
+    for(let s=0;s<P.length;s+=40){
+      const ch=P.slice(s,s+40);
+      $('#wMsg').textContent=`Sorting the documents (pages ${s+1}–${s+ch.length} of ${P.length})…`;
+            const r=await api('index',{pages:ch.map(p=>({n:p.n,text:p.lines.map(l=>l.t).join('\n').slice(0,500)}))});
+      for(const d of (r?.documents||[])){
+        const a=Math.max(s+1,+d.start||0),b=Math.min(s+ch.length,+d.end||a);
+        for(let n=a;n<=b;n++)pick[n-1]={name:String(d.name||'Document'),type:String(d.type||'other'),purpose:String(d.purpose||'')};
+      }
+    }
+  }catch(e){return one('Closing package')}
+  st.docs=[];let last=null;
+  P.forEach((p,i)=>{
+    const d=pick[i]||last||{name:'Other pages',type:'other',purpose:''};
+    const prev=st.docs[st.docs.length-1];
+    if(prev&&prev.name===d.name&&prev.end===p.n-1)prev.end=p.n;
+    else st.docs.push({...d,start:p.n,end:p.n});
+    p.doc=st.docs.length-1;last=d;
+  });
+}
+
+/* ---------- viewer ---------- */
+function fillDocs(){
+  $('#docSel').innerHTML=st.docs.map((d,i)=>{
+    const done=st.pages.filter(p=>p.doc===i&&p.state==='done').length,tot=d.end-d.start+1;
+    return`<option value="${i}">${esc(d.name)} · p${d.start}${d.end>d.start?'–'+d.end:''}${done?` (${done}/${tot} explained)`:''}</option>`}).join('');
+  $('#docSel').value=st.pages[st.cur].doc;
+}
+function go(i){
+  st.cur=Math.max(0,Math.min(st.pages.length-1,i));st.sel=null;st.tap=null;
+  const p=st.pages[st.cur];
+  $('#pgNum').textContent=`Page ${p.n} of ${st.pages.length}`;
+  $('#bPrev').disabled=st.cur===0;$('#bNext').disabled=st.cur===st.pages.length-1;
+  fillDocs();renderPage();renderPanel();
+  if(sample&&!p.state)analyze(st.cur);
+}
+let lastW=0;
+async function renderPage(){
+  const p=st.pages[st.cur],pg=await st.pdf.getPage(p.n),v1=pg.getViewport({scale:1});
+  const W=$('#stage').clientWidth||600;lastW=W;
+  const sc=W/v1.width,dpr=Math.min(window.devicePixelRatio||1,2),vp=pg.getViewport({scale:sc*dpr}),c=$('#cv');
+  if(task){try{task.cancel()}catch{}}
+  c.width=Math.floor(vp.width);c.height=Math.floor(vp.height);c.style.height=(v1.height*sc)+'px';
+  drawOverlay();
+  task=pg.render({canvasContext:c.getContext('2d'),viewport:vp});
+  try{await task.promise}catch{}
+}
+const ro=new ResizeObserver(()=>{const W=$('#stage').clientWidth;if(st.pdf&&!$('#vView').hidden&&Math.abs(W-lastW)>4){clearTimeout(ro.t);ro.t=setTimeout(renderPage,150)}});
+ro.observe($('#stage'));
+function drawOverlay(){
+  const p=st.pages[st.cur],selL=new Set(st.sel!=null?(p.an?.items[st.sel]?.lines||[]):[]);
+  if(st.tap)selL.add(st.tap.id);
+  $('#ov').innerHTML=p.lines.map(l=>`<button class="ln${p.map[l.i]!=null?' hit':''}${selL.has(l.i)?' on':''}" data-i="${l.i}" title="${esc(l.t)}" aria-label="${esc(l.t)}" style="left:${(l.x*100-.6).toFixed(2)}%;top:${(l.y*100).toFixed(2)}%;width:${(l.w*100+1.2).toFixed(2)}%;height:${(l.h*100).toFixed(2)}%"></button>`).join('');
+}
+function renderPanel(){
+  const p=st.pages[st.cur],d=st.docs[p.doc],a=p.an;
+  let h=`<span class="chip">${SIDE_NAME[st.side]}</span><h2>${esc(d.name)}</h2><p class="small">Page ${p.n - d.start + 1} of ${d.end-d.start+1} in this document${d.purpose?' · '+esc(d.purpose):''}</p>`;
+  if(!sample)h+=`<p class="lead">AI explanations aren't available in this view. Open this page inside Claude.</p>`;
+  else if(p.state==='busy')h+=`<p class="lead"><span class="spin"></span>Explaining this page…</p>`;
+  else if(p.state==='err')h+=`<p class="lead">${esc(p.err)}</p><button class="btn" id="bRe">Try again</button>`;
+  if(st.tap)h+=`<div class="tap"><q>${esc(st.tap.t)}</q><div id="tapOut" class="out" style="margin:0">${st.tap.busy&&!st.tap.out?'<span class="spin"></span>Explaining…':esc(st.tap.out)}</div></div>`;
+  if(a){
+    h+=`<p class="lead">${esc(a.summary)}</p>`;
+    if(a.sign)h+=`<div class="sign"><b>By signing:</b> ${esc(a.sign)}</div>`;
+    if(a.items.length){
+      h+=`<h3>Tap a line on the page, or one of these</h3>`;
+      a.items.forEach((it,k)=>{
+        const on=st.sel===k;
+        h+=`<button class="it${on?' on':''}" data-k="${k}" aria-expanded="${on}"><span class="lab">${esc(it.label)}</span>${it.amount?`<span class="amt">${esc(it.amount)}</span>`:''}${it.paidBy?`<span class="who">${esc(it.paidBy)}</span>`:''}</button>`;
+        if(on)h+=`<div class="det"><p>${esc(it.what)}</p>${it.tip?`<p class="tip"><b>On the phone:</b> ${esc(it.tip)}</p>`:''}</div>`;
+      });
+    }
+    if(a.questions.length)h+=`<h3>Questions signers ask about this page</h3>`+a.questions.map(x=>`<details><summary>${esc(x.q)}</summary><p>${esc(x.a)}</p></details>`).join('');
+  }
+  $('#pinfo').innerHTML=h;
+}
+function clean(r,p){
+  const ids=new Set(p.lines.map(l=>l.i)),S=v=>v==null?'':String(v);
+  const items=(Array.isArray(r?.items)?r.items:[]).slice(0,20).map(it=>({lines:(Array.isArray(it.lines)?it.lines:[it.lines]).map(Number).filter(n=>ids.has(n)),label:S(it.label)||'Item',what:S(it.what),amount:S(it.amount),paidBy:S(it.paidBy),tip:S(it.tip)}));
+  const questions=(Array.isArray(r?.questions)?r.questions:[]).slice(0,6).map(x=>({q:S(x.q),a:S(x.a)})).filter(x=>x.q);
+  p.map={};items.forEach((it,k)=>it.lines.forEach(n=>{if(p.map[n]==null)p.map[n]=k}));
+  return{summary:S(r?.summary),sign:S(r?.sign),items,questions};
+}
+async function pageData(n,scale=1.5){
+  const pg=await st.pdf.getPage(n),vp=pg.getViewport({scale}),c=document.createElement('canvas');
+  c.width=vp.width;c.height=vp.height;await pg.render({canvasContext:c.getContext('2d'),viewport:vp}).promise;
+  return c.toDataURL('image/jpeg',.8);
+}
+async function pageBlob(n,scale=1.6){
+  const pg=await st.pdf.getPage(n),vp=pg.getViewport({scale}),c=document.createElement('canvas');
+  c.width=vp.width;c.height=vp.height;await pg.render({canvasContext:c.getContext('2d'),viewport:vp}).promise;
+  return new Promise(r=>c.toBlob(r,'image/jpeg',.85));
+}
+async function analyze(i){
+  const p=st.pages[i];if(!sample||p.state==='busy'||p.state==='done')return;
+  p.state='busy';if(i===st.cur)renderPanel();
+  const d=st.docs[p.doc],scan=!p.lines.length,side=st.side;
+  try{
+    const r=await api('page',{doc:d.name,type:d.type,n:p.n,docPage:p.n-d.start+1,side,text:scan?'':pageText(p,12000),image:scan?await pageData(p.n):undefined});
+    if(side!==st.side){p.state='';p.map={};return}
+    p.an=clean(r,p);p.state='done';
+  }catch(e){if(side!==st.side){p.state='';return}p.state='err';p.err=e?.code==='scan'?"This page is a scan with no readable text, and images can't be sent from this view.":errMsg(e)}
+  if(i===st.cur){renderPanel();drawOverlay()}
+  fillDocs();
+}
+async function tapLine(id){
+  const p=st.pages[st.cur],l=p.lines.find(x=>x.i===id);if(!l)return;
+  st.sel=null;st.tap={id,t:l.t,out:'',busy:true};drawOverlay();renderPanel();
+  if(innerWidth<=820)$('#pinfo').scrollIntoView({behavior:'smooth',block:'start'});
+  if(!sample){st.tap.busy=false;st.tap.out="AI explanations aren't available in this view.";renderPanel();return}
+  const d=st.docs[p.doc],me=st.tap;
+  try{
+    const{text}=await api('line',{doc:d.name,side:st.side,text:pageText(p,8000),id,line:l.t});
+    me.out=text;
+  }catch(e){me.out=e?.text||errMsg(e)}
+  me.busy=false;if(st.tap===me)renderPanel();
+}
+$('#ov').addEventListener('click',e=>{
+  const b=e.target.closest('.ln');if(!b)return;
+  const p=st.pages[st.cur],id=+b.dataset.i;
+  if(p.map[id]!=null)pick(p.map[id],true);else tapLine(id);
+});
+function pick(k,fromPage){
+  st.sel=st.sel===k&&!fromPage?null:k;st.tap=null;drawOverlay();renderPanel();
+  if(fromPage)$(`.it[data-k="${k}"]`)?.scrollIntoView({behavior:'smooth',block:'nearest'});
+  else $('.ln.on')?.scrollIntoView({behavior:'smooth',block:'center'});
+}
+$('#pinfo').addEventListener('click',e=>{
+  const it=e.target.closest('.it');if(it)return pick(+it.dataset.k,false);
+  if(e.target.id==='bRe'){st.pages[st.cur].state='';analyze(st.cur)}
+});
+$('#bPrev').onclick=()=>go(st.cur-1);$('#bNext').onclick=()=>go(st.cur+1);
+$('#docSel').onchange=e=>go(st.docs[+e.target.value].start-1);
+document.addEventListener('keydown',e=>{if($('#vView').hidden||/INPUT|TEXTAREA|SELECT/.test(e.target.tagName))return;if(e.key==='ArrowRight')go(st.cur+1);if(e.key==='ArrowLeft')go(st.cur-1)});
+
+$('#bAll').onclick=async()=>{
+  const b=$('#bAll');if(st.busy){st.stop=true;b.textContent='Stopping…';return}
+  st.busy=true;st.stop=false;b.textContent='Stop';
+  for(let i=0;i<st.pages.length&&!st.stop;i++){
+    if(st.pages[i].state==='done')continue;
+    say(`Explaining page ${i+1} of ${st.pages.length}…`);
+    await analyze(i);
+    if(st.pages[i].state==='err'){say(`Stopped at page ${i+1}: ${st.pages[i].err}`);break}
+  }
+  const done=st.pages.filter(p=>p.state==='done').length;
+  if(!st.pages.some(p=>p.state==='err'))say(`${done} of ${st.pages.length} pages explained.`);
+  st.busy=false;b.textContent='Explain whole package';
+};
+
+$('#bAsk').onclick=async()=>{
+  const q=$('#q').value.trim(),out=$('#aOut');if(!q)return;
+  if(!sample){out.textContent="AI answers aren't available in this view.";return}
+  const p=st.pages[st.cur],d=st.docs[p.doc];
+  const docTxt=st.pages.filter(x=>x.doc===p.doc).map(x=>`--- page ${x.n} ---\n`+x.lines.map(l=>l.t).join('\n')).join('\n').slice(0,40000);
+  const list=st.docs.map(x=>`${x.name} (pages ${x.start}-${x.end})`).join('; ');
+  ctl=new AbortController();$('#bStop').hidden=false;$('#bAsk').disabled=true;out.innerHTML='<span class="spin"></span>Thinking…';
+  try{
+    const{text}=await api('ask',{side:st.side,list,doc:d.name,n:p.n,text:docTxt,question:q},ctl.signal);out.textContent=text;
+  }catch(e){if(e?.code!=='cancelled')out.textContent=(e?.text?e.text+'\n\n':'')+errMsg(e);else if(!e.text)out.textContent=''}
+  $('#bStop').hidden=true;$('#bAsk').disabled=false;
+};
+$('#bStop').onclick=()=>ctl?.abort();
+
+/* ---------- signer summary ---------- */
+const mails=[];
+function syncFor(){const f=$('#sFor').value;$('#wB').hidden=f==='seller';$('#wS').hidden=f==='buyer'}
+$('#sFor').onchange=syncFor;
+$('#bSum').onclick=()=>{$('#sFor').value=st.side;syncFor();show('vSum')};
+$('#bBack').onclick=()=>{show('vView');renderPage()};
+const WHO={
+  buyer:'the buyers / borrowers (if this is a refinance or a cash purchase, write for that). Use only buyer/borrower figures: cash to close, sale price, loan amount, interest rate, monthly payment, their closing costs, credits, escrow and prepaids. Do not mention the seller\'s proceeds, payoff or commission.',
+  seller:'the sellers. Use only seller figures: sale price, cash to seller (net proceeds), mortgage payoff, commission, seller credits, transfer taxes and fees the seller pays, tax prorations. Do not mention the buyer\'s loan, cash to close or their costs. Sellers do not need to bring closing funds unless the figures show they owe money; tell them to bring photo ID and payoff or deed details if relevant.'};
+function renderMails(){
+  $('#sOut').innerHTML=mails.map((m,k)=>`<div class="mail" data-k="${k}"><h3>${m.side==='buyer'?'Buyer side email':'Seller side email'}</h3>
+  <label for="sj${k}">Subject</label><input type="text" id="sj${k}" data-f="subject" value="${esc(m.subject)}">
+  <label for="sb${k}" style="margin-top:12px">Email</label><textarea id="sb${k}" data-f="body">${esc(m.body)}</textarea>
+  <div class="row"><button class="btn pri" data-a="copy">Copy email</button><button class="btn" data-a="pdf">Download PDF</button><span class="note" data-n></span></div></div>`).join('');
+}
+$('#sOut').addEventListener('input',e=>{const box=e.target.closest('.mail');if(box&&e.target.dataset.f)mails[+box.dataset.k][e.target.dataset.f]=e.target.value});
+$('#sOut').addEventListener('click',e=>{const b=e.target.closest('[data-a]');if(!b)return;const box=b.closest('.mail'),m=mails[+box.dataset.k],n=box.querySelector('[data-n]');b.dataset.a==='copy'?copyMail(m,box,n):pdfMail(m,n)});
+$('#bWrite').onclick=async()=>{
+  const m=$('#sMsg');if(!sample)return;
+  let ps=st.pages.filter(p=>st.docs[p.doc].type==='closing_disclosure');
+  if(!ps.length)ps=st.pages.filter(p=>st.docs[p.doc].type==='settlement_statement');
+  if(!ps.length)ps=st.pages.slice(0,6);
+  let src=ps.map(p=>`=== ${st.docs[p.doc].name}, page ${p.n} ===\n`+p.lines.map(l=>l.t).join('\n')).join('\n').slice(0,40000),imgs;
+  if(!src.replace(/=== .*===/g,'').trim()){
+    if(!imgMax){m.textContent='This package has no readable text to summarize.';return}
+    imgs=await Promise.all(ps.slice(0,4).map(p=>pageData(p.n,1.3)));
+  }
+  const list=st.docs.map(x=>x.name).join('; '),f=$('#sFor').value,sides=f==='both'?['buyer','seller']:[f];
+  $('#bWrite').disabled=true;mails.length=0;renderMails();
+  for(const side of sides){
+    m.innerHTML=`<span class="spin"></span>Writing the ${side} email…`;
+    const names=(side==='buyer'?$('#sBuyer').value:$('#sSeller').value)||(side==='buyer'?'the buyers':'the sellers');
+    try{
+      const r=await api('summary',{side,names,when:$('#sWhen').value,from:$('#sFrom').value,list,text:imgs?'':src,images:imgs});
+      mails.push({side,subject:String(r?.subject||'Your closing documents, explained'),body:String(r?.body||'')});renderMails();
+    }catch(e){m.textContent=`The ${side} email failed: ${errMsg(e)}`;$('#bWrite').disabled=false;return}
+  }
+  m.textContent=mails.length>1?'Both emails are ready. Read them over before sending.':'Done. Read it over before sending.';
+  $('#bWrite').disabled=false;
+};
+async function copyMail(m,box,n){
+  try{await navigator.clipboard.writeText(m.subject+'\n\n'+m.body);n.textContent='Copied. Paste it into your email.'}
+  catch{box.querySelector('textarea').select();n.textContent='Copy was blocked here. The text is selected, so copy it yourself.'}
+}
+async function pdfMail(m,n){
+  if(!window.jspdf){n.textContent="The PDF maker didn't load. Reload the page and try again.";return}
+  const{jsPDF}=window.jspdf,doc=new jsPDF({unit:'pt',format:'letter'});
+  const head=()=>{doc.setFillColor(11,79,138);doc.rect(0,0,612,56,'F');doc.setTextColor(255);doc.setFont('times','bold');doc.setFontSize(16);doc.text('C.L.A. Title & Escrow',40,35);doc.setTextColor(16,19,26)};
+  head();let y=92;doc.setFont('times','bold');doc.setFontSize(15);
+  for(const s of doc.splitTextToSize(m.subject,532)){doc.text(s,40,y);y+=19}
+  y+=8;doc.setFont('times','normal');doc.setFontSize(11.5);
+  for(const s of doc.splitTextToSize(m.body,532)){if(y>740){doc.addPage();head();y=88}doc.text(s,40,y);y+=15}
+  doc.setFontSize(8.5);doc.setTextColor(90);doc.text('This summary explains your documents in plain language. It is not legal or tax advice. The signed documents control.',40,770);
+  doc.save((m.side==='seller'?'Seller':'Buyer')+' closing summary.pdf');n.textContent='Downloaded.'
+}
+
+/* ---------- upload + sample ---------- */
+const drop=$('#drop'),fi=$('#file');
+const take=f=>{if(!f)return;if(!/pdf$/i.test(f.type)&&!/\.pdf$/i.test(f.name)){alertBox('Please choose a PDF file.');return}f.arrayBuffer().then(b=>openPdf(new Uint8Array(b),f.name))};
+drop.onclick=()=>fi.click();drop.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();fi.click()}};
+fi.onchange=()=>{take(fi.files[0]);fi.value=''};
+drop.ondragover=e=>{e.preventDefault();drop.classList.add('ov')};drop.ondragleave=()=>drop.classList.remove('ov');
+drop.ondrop=e=>{e.preventDefault();drop.classList.remove('ov');take(e.dataTransfer.files[0])};
+$('#bNew').onclick=()=>{st.stop=true;show('vUp')};
+
+const SAMPLE=[
+ [{h:14,t:'Closing Disclosure - Closing Cost Details'},{p:'Borrowers: Jordan Rivera and Casey Rivera. Seller: Morgan Lee. Property: 1452 Sample Lane, Bowie, MD 20716. Lender: Example Home Lending. Loan amount: $320,000.00. Closing date: 12/15/2026.'},['Loan Costs','Borrower-Paid','Seller-Paid'],{s:'A. Origination Charges'},['01 1.000% of Loan Amount (Points)','$3,200.00'],['02 Underwriting Fee','$995.00'],{s:'B. Services Borrower Did Not Shop For'},['01 Appraisal Fee to Sample Appraisal Co.','$550.00'],['02 Credit Report Fee','$45.00'],['03 Flood Determination Fee','$12.00'],{s:'C. Services Borrower Did Shop For'},["01 Title - Lender's Title Insurance",'$1,140.00'],['02 Title - Settlement Fee to C.L.A. Title & Escrow','$595.00'],['03 Title - Abstract / Title Search','$250.00'],['04 Title - Seller Settlement Fee','','$395.00'],['Other Costs'],{s:'E. Taxes and Other Government Fees'},['01 Recording Fees  Deed: $60.00  Mortgage: $120.00','$180.00'],['02 State Transfer Tax','$1,000.00','$1,000.00'],['03 County Transfer Tax','$2,800.00','$2,800.00'],['04 County Recordation Tax','$2,200.00'],{s:'F. Prepaids'},["01 Homeowner's Insurance Premium (12 mo.)",'$1,380.00'],['02 Prepaid Interest ($60.27 per day from 12/15/26 to 1/1/27)','$1,024.59'],['03 Property Taxes (3 mo.)','$1,050.00'],{s:'G. Initial Escrow Payment at Closing'},["01 Homeowner's Insurance $115.00 per month for 2 mo.",'$230.00'],['02 Property Taxes $350.00 per month for 4 mo.','$1,400.00'],{s:'H. Other'},["01 Title - Owner's Title Insurance (optional)",'$1,325.00'],['02 Real Estate Commission - Listing Broker','','$12,000.00'],{s:'J. TOTAL CLOSING COSTS'},['Borrower-Paid at Closing','$19,376.59','$16,195.00']],
+ [{h:14,t:'Closing Disclosure - Summaries of Transactions'},{s:"BORROWER'S TRANSACTION"},{s:'K. Due from Borrower at Closing'},['01 Sale Price of Property','$400,000.00'],['03 Closing Costs Paid at Closing (J)','$19,376.59'],['Adjustments for Items Paid by Seller in Advance'],['08 County Property Taxes 12/15/26 to 06/30/27','$2,266.85'],['Total Due from Borrower at Closing (K)','$421,643.44'],{s:'L. Paid Already by or on Behalf of Borrower at Closing'},['01 Deposit','$10,000.00'],['02 Loan Amount','$320,000.00'],['05 Seller Credit','$5,000.00'],['Total Paid Already (L)','$335,000.00'],{s:'CALCULATION'},['Total Due from Borrower at Closing (K)','$421,643.44'],['Total Paid Already by or on Behalf of Borrower at Closing (L)','-$335,000.00'],['Cash to Close From Borrower','$86,643.44'],{s:"SELLER'S TRANSACTION"},['M. Sale Price of Property','$400,000.00'],['M. County Property Taxes 12/15/26 to 06/30/27','$2,266.85'],['N. Payoff of First Mortgage Loan','$212,480.33'],['N. Seller Credit','$5,000.00'],['N. Closing Costs Paid at Closing (J)','$16,195.00'],['Cash to Seller','$168,591.52']],
+ [{h:14,t:'Note'},{p:'Date: December 15, 2026. Property address: 1452 Sample Lane, Bowie, MD 20716.'},{p:'1. BORROWER\'S PROMISE TO PAY. In return for a loan that I have received, I promise to pay U.S. $320,000.00 (this amount is called "Principal"), plus interest, to the order of the Lender. The Lender is Example Home Lending.'},{p:'2. INTEREST. Interest will be charged on unpaid principal until the full amount of Principal has been paid. I will pay interest at a yearly rate of 6.875%.'},{p:'3. PAYMENTS. I will pay principal and interest by making a payment every month. I will make my monthly payment on the 1st day of each month beginning on February 1, 2027. My monthly payment will be in the amount of U.S. $2,102.17. If, on January 1, 2057, I still owe amounts under this Note, I will pay those amounts in full on that date.'},{p:'4. BORROWER\'S RIGHT TO PREPAY. I have the right to make payments of Principal at any time before they are due without paying a prepayment charge.'},{p:'6. LATE CHARGES. If the Note Holder has not received the full amount of any monthly payment by the end of 15 calendar days after the date it is due, I will pay a late charge of 5.000% of my overdue payment of principal and interest.'},{p:'WITNESS THE HAND(S) AND SEAL(S) OF THE UNDERSIGNED.'},{p:'______________________________ (Seal)  Jordan Rivera, Borrower'},{p:'______________________________ (Seal)  Casey Rivera, Borrower'}],
+ [{h:14,t:'Signature and Name Affidavit'},{p:'Before me, the undersigned notary, personally appeared Jordan Rivera and Casey Rivera, who being duly sworn, state:'},{p:'1. Jordan Rivera is one and the same person as J. Rivera and Jordan A. Rivera, and the signature below is my true signature.'},{p:'2. Casey Rivera is one and the same person as Casey M. Rivera, and the signature below is my true signature.'},{p:'3. We make this affidavit so the lender and title insurer can rely on it in making the loan and issuing title insurance for 1452 Sample Lane, Bowie, MD 20716.'},{p:'______________________________  Jordan Rivera'},{p:'______________________________  Casey Rivera'},{p:'Subscribed and sworn before me on December 15, 2026. ______________________________ Notary Public. My commission expires: __________'}]
+];
+$('#bDemo').onclick=()=>{
+  if(!window.jspdf){alertBox("The sample couldn't be made here.");return}
+  const{jsPDF}=window.jspdf,d=new jsPDF({unit:'pt',format:'letter'});
+  SAMPLE.forEach((pg,i)=>{
+    if(i)d.addPage();let y=56;d.setFont('helvetica','normal');d.setFontSize(8);d.text('SAMPLE PACKAGE - fictional people, property and figures',40,30);
+    for(const r of pg){
+      if(r.h){d.setFont('helvetica','bold');d.setFontSize(r.h);d.text(r.t,40,y);y+=24;d.setFont('helvetica','normal');continue}
+      if(r.s){d.setFont('helvetica','bold');d.setFontSize(10);y+=4;d.text(r.s,40,y);y+=15;d.setFont('helvetica','normal');continue}
+      if(r.p){d.setFontSize(10.5);const ls=d.splitTextToSize(r.p,530);d.text(ls,40,y);y+=ls.length*14+8;continue}
+      d.setFontSize(9.5);d.text(r[0],48,y);if(r[1])d.text(r[1],480,y,{align:'right'});if(r[2])d.text(r[2],572,y,{align:'right'});y+=15;
+    }
+  });
+  openPdf(new Uint8Array(d.output('arraybuffer')),'Sample package (fictional).pdf');
+};
+}
+</script>
+</body>
+</html>
