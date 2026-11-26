@@ -40,4 +40,4 @@ A separate tool for the title team at **https://training.clatitle.com/title-revi
 - No client documents are stored in this repo.
 
 ## Closing Package Explainer (`/closing-explainer/`)
-A separate tool at **https://training.clatitle.com/closing-explainer/** that explains every page of a closing package in plain English for buyer or seller calls. The PDF stays in the browser; page text goes to the edge function `closing-explainer` (project CLA Training), which calls Claude. Nothing is stored. It can go in the portal as is (`?embed=1`). See `closing-explainer/README.md`.
+A separate tool at **https://training.clatitle.com/closing-explainer/** that explains every page of a closing package in plain English for buyer or seller calls. SSNs are blacked out in the browser; only the blacked-out page images are saved (never the PDF), and page text goes to the edge function `closing-explainer` (project CLA Training), which calls Claude. It can go in the portal as is (`?embed=1`). See `closing-explainer/README.md`.
