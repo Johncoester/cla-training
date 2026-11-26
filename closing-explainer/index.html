@@ -108,7 +108,6 @@ html.embed header>div:first-child{display:none}html.embed header{padding:8px 12p
   <div><h1>CLA Closing Package Explainer</h1><div class="co">Upload a closing package. Claude explains every page in plain English so you can walk the signer through it.</div></div>
   <span class="sp"></span>
   <button class="btn" id="bNew" hidden>New package</button>
-  <button class="btn" id="bAll" hidden>Explain whole package</button>
   <button class="btn" id="bSum" hidden>Buyer summary</button>
 </header>
 
@@ -229,14 +228,14 @@ document.querySelector('.seg').addEventListener('click',e=>{
   st.side=b.dataset.side;try{localStorage.setItem('cla-side',st.side)}catch{}
   paintSide();st.stop=true;
   for(const p of st.pages)if(p.state!=='busy'){p.an=null;p.state='';p.map={}}
-  say('');if(st.pdf)go(st.cur);
+  say('');if(st.pdf){go(st.cur);explainAll()}
 });
 const lib=window.pdfjsLib;
 if(lib)lib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
 
 function errMsg(e){if(e?.message)return e.message;return({not_granted:"Claude wasn't allowed for this page.",sampling_disabled:"Claude isn't available on this account.",rate_limited:'Too many requests right now. Wait a minute and try again.',session_expired:'Please sign in to Claude again.',refused:"Claude couldn't explain this one.",invalid_json:'The answer came back garbled. Try again.',prompt_too_large:'Too much text to send at once.',image_rejected:"This page image couldn't be read."})[e?.code]||'Something went wrong. Try again.'}
-function show(v){for(const id of['vUp','vWork','vView','vSum'])$('#'+id).hidden=id!==v;const inPkg=v==='vView'||v==='vSum';$('#bNew').hidden=!inPkg;$('#bAll').hidden=v!=='vView'||!sample;$('#bSum').hidden=v!=='vView'||!sample}
+function show(v){for(const id of['vUp','vWork','vView','vSum'])$('#'+id).hidden=id!==v;const inPkg=v==='vView'||v==='vSum';$('#bNew').hidden=!inPkg;$('#bSum').hidden=v!=='vView'||!sample}
 const say=t=>{$('#status').textContent=t};
 
 /* ---------- reading the PDF ---------- */
@@ -274,7 +273,7 @@ async function openPdf(data,name){
     }
     await indexDocs();
   }catch(e){show('vUp');alertBox("That file couldn't be opened as a PDF.");return}
-  show('vView');go(0);
+  show('vView');go(0);explainAll();
 }
 function alertBox(t){const p=$('#noai');p.hidden=false;p.textContent=t}
 const pageText=(p,max=9000)=>p.lines.map(l=>l.i+'| '+l.t).join('\n').slice(0,max);
@@ -305,6 +304,19 @@ async function indexDocs(){
     p.doc=st.docs.length-1;last=d;
   });
 }
+
+/* ---------- explain every page in the background, 4 at a time, current page first ---------- */
+let runId=0;
+async function explainAll(){
+  const my=++runId,n=st.pages.length;
+  const order=[st.cur,...st.pages.map((_,i)=>i).filter(i=>i!==st.cur)];let k=0;
+  const worker=async()=>{while(my===runId&&k<order.length){const i=order[k++];if(!st.pages[i].state)await analyze(i)}};
+  await Promise.all([worker(),worker(),worker(),worker()]);
+  if(my!==runId)return;
+  const done=st.pages.filter(p=>p.state==='done').length,bad=st.pages.filter(p=>p.state==='err').length;
+  say(bad?`${done} of ${n} pages explained. ${bad} didn't finish; open those pages and click Try again.`:`All ${n} pages explained.`);
+}
+function progress(){if(!st.pages.length)return;const done=st.pages.filter(p=>p.state==='done').length;if(done<st.pages.length)say(`Explaining the package: ${done} of ${st.pages.length} pages ready…`)}
 
 /* ---------- viewer ---------- */
 function fillDocs(){
@@ -388,7 +400,7 @@ async function analyze(i){
     p.an=clean(r,p);p.state='done';
   }catch(e){if(side!==st.side){p.state='';return}p.state='err';p.err=e?.code==='scan'?"This page is a scan with no readable text, and images can't be sent from this view.":errMsg(e)}
   if(i===st.cur){renderPanel();drawOverlay()}
-  fillDocs();
+  fillDocs();progress();
 }
 async function tapLine(id){
   const p=st.pages[st.cur],l=p.lines.find(x=>x.i===id);if(!l)return;
@@ -420,19 +432,6 @@ $('#bPrev').onclick=()=>go(st.cur-1);$('#bNext').onclick=()=>go(st.cur+1);
 $('#docSel').onchange=e=>go(st.docs[+e.target.value].start-1);
 document.addEventListener('keydown',e=>{if($('#vView').hidden||/INPUT|TEXTAREA|SELECT/.test(e.target.tagName))return;if(e.key==='ArrowRight')go(st.cur+1);if(e.key==='ArrowLeft')go(st.cur-1)});
 
-$('#bAll').onclick=async()=>{
-  const b=$('#bAll');if(st.busy){st.stop=true;b.textContent='Stopping…';return}
-  st.busy=true;st.stop=false;b.textContent='Stop';
-  for(let i=0;i<st.pages.length&&!st.stop;i++){
-    if(st.pages[i].state==='done')continue;
-    say(`Explaining page ${i+1} of ${st.pages.length}…`);
-    await analyze(i);
-    if(st.pages[i].state==='err'){say(`Stopped at page ${i+1}: ${st.pages[i].err}`);break}
-  }
-  const done=st.pages.filter(p=>p.state==='done').length;
-  if(!st.pages.some(p=>p.state==='err'))say(`${done} of ${st.pages.length} pages explained.`);
-  st.busy=false;b.textContent='Explain whole package';
-};
 
 $('#bAsk').onclick=async()=>{
   const q=$('#q').value.trim(),out=$('#aOut');if(!q)return;
@@ -511,7 +510,7 @@ drop.onclick=()=>fi.click();drop.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){
 fi.onchange=()=>{take(fi.files[0]);fi.value=''};
 drop.ondragover=e=>{e.preventDefault();drop.classList.add('ov')};drop.ondragleave=()=>drop.classList.remove('ov');
 drop.ondrop=e=>{e.preventDefault();drop.classList.remove('ov');take(e.dataTransfer.files[0])};
-$('#bNew').onclick=()=>{st.stop=true;show('vUp')};
+$('#bNew').onclick=()=>{runId++;show('vUp')};
 
 const SAMPLE=[
  [{h:14,t:'Closing Disclosure - Closing Cost Details'},{p:'Borrowers: Jordan Rivera and Casey Rivera. Seller: Morgan Lee. Property: 1452 Sample Lane, Bowie, MD 20716. Lender: Example Home Lending. Loan amount: $320,000.00. Closing date: 12/15/2026.'},['Loan Costs','Borrower-Paid','Seller-Paid'],{s:'A. Origination Charges'},['01 1.000% of Loan Amount (Points)','$3,200.00'],['02 Underwriting Fee','$995.00'],{s:'B. Services Borrower Did Not Shop For'},['01 Appraisal Fee to Sample Appraisal Co.','$550.00'],['02 Credit Report Fee','$45.00'],['03 Flood Determination Fee','$12.00'],{s:'C. Services Borrower Did Shop For'},["01 Title - Lender's Title Insurance",'$1,140.00'],['02 Title - Settlement Fee to C.L.A. Title & Escrow','$595.00'],['03 Title - Abstract / Title Search','$250.00'],['04 Title - Seller Settlement Fee','','$395.00'],['Other Costs'],{s:'E. Taxes and Other Government Fees'},['01 Recording Fees  Deed: $60.00  Mortgage: $120.00','$180.00'],['02 State Transfer Tax','$1,000.00','$1,000.00'],['03 County Transfer Tax','$2,800.00','$2,800.00'],['04 County Recordation Tax','$2,200.00'],{s:'F. Prepaids'},["01 Homeowner's Insurance Premium (12 mo.)",'$1,380.00'],['02 Prepaid Interest ($60.27 per day from 12/15/26 to 1/1/27)','$1,024.59'],['03 Property Taxes (3 mo.)','$1,050.00'],{s:'G. Initial Escrow Payment at Closing'},["01 Homeowner's Insurance $115.00 per month for 2 mo.",'$230.00'],['02 Property Taxes $350.00 per month for 4 mo.','$1,400.00'],{s:'H. Other'},["01 Title - Owner's Title Insurance (optional)",'$1,325.00'],['02 Real Estate Commission - Listing Broker','','$12,000.00'],{s:'J. TOTAL CLOSING COSTS'},['Borrower-Paid at Closing','$19,376.59','$16,195.00']],

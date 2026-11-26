@@ -4,8 +4,8 @@
 // No logins, same as the Title Review (owner's choice for testing). Stateless: nothing is stored;
 // the page sends page text (or a page image for scans) and gets the explanation back.
 
-const SMART = "claude-sonnet-5-5"; // page explanations, caller questions, signer emails
-const QUICK = "claude-haiku-5-5";  // sorting the package, one-line explanations
+const SMART = "claude-sonnet-5-5"; // caller questions, signer emails
+const QUICK = "claude-haiku-5-5";  // sorting the package, page explanations, one-line explanations
 const SELFTEST_TOKEN = "cla-ce-selftest-7k3p";
 const RELAY_URL = "https://aqcervntopidtcazcmlv.supabase.co/functions/v1/claude-relay";
 const RELAY_TOKEN = "0LuyYaZiw2TqIo6sDcojrSABf_5LLhsw";
@@ -82,7 +82,8 @@ Reply with only JSON:
 Include 4-16 items covering every line with money, rates, dates, parties, signatures and anything signers ask about (prorations, adjustments, escrow, prepaids, points, title insurance, recording and transfer taxes, credits, payoffs, commissions, cash to close or cash to seller, APR). Each item's lines are the row numbers it covers. Up to 4 questions. If the page is a shipping label or cover sheet, say so in one sentence and return no items.
 
 ${scan ? "" : clip(b.text, 12000)}`;
-  return await askJson(SMART, prompt, 6000, image ? [image] : [], "low");
+  // Quick model: a page comes back in a few seconds instead of ~25 (John, Nov 25 2026: "can we make it faster").
+  return await askJson(QUICK, prompt, 5000, image ? [image] : []);
 }
 
 async function explainLine(b: any) {
